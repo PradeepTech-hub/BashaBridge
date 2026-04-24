@@ -1,45 +1,118 @@
-# BhashaBridge 🗣️📖
+# BhashaBridge 🗣️📚
 
-**BhashaBridge** is an interactive Android application designed to help users bridge the language gap by learning **English** and **Hindi** through their native **Kannada** language. The app focuses on pronunciation and basic vocabulary using visual aids, Text-to-Speech (TTS), and Speech Recognition.
+**BhashaBridge** is an Android application designed to help **government school students** improve their **English language skills using Kannada as a bridge language**.
 
-## 🚀 Features
+The app focuses on **basic vocabulary, pronunciation, and sentence formation**, aligned with the **Karnataka Government School syllabus (1st & 2nd Standard)**.
 
-- **Dual Learning Paths**: Choose to practice either English or Hindi.
-- **Native Support**: All translations and interfaces are optimized for Kannada speakers.
-- **Category-Based Learning**:
-  - 🐶 Animals
-  - 🍎 Fruits
-  - 🏠 Daily Use Objects
-  - 🎒 School Objects
-  - 🔢 Numbers
-  - 🗣️ Full Sentences
-- **Interactive Practice**:
-  - **Listen**: High-quality Text-to-Speech to hear correct pronunciations.
-  - **Speak**: Real-time speech recognition to practice speaking.
-  - **Feedback**: Instant feedback (Excellent, Very Good, Try Again) based on pronunciation accuracy.
-- **Progress Tracking**: Monitor your learning journey with a built-in progress tracker that saves scores to a local SQLite database.
-- **Standardized Content**: Content organized by difficulty levels (Standard 1, Standard 2, etc.).
-- **Modern UI**: Built with Material Design 3, featuring smooth animations and an intuitive layout.
+---
+
+## 🎯 Objective
+
+To support young learners in:
+- Understanding English through **Kannada**
+- Improving **pronunciation and speaking skills**
+- Building **confidence in communication**
+- Learning in a **simple, visual, and interactive way**
+
+---
+
+## 🚀 Key Features
+
+### 📘 Standard-Based Learning
+- Students can choose:
+  - 1st Standard
+  - 2nd Standard
+- Content is structured based on **syllabus difficulty level**
+- Ensures **age-appropriate learning**
+
+---
+
+### 🌐 Language Support
+- English (Default)
+- Kannada (for understanding and guidance)
+- Kannada is used as a **support language for better comprehension**
+
+---
+
+### 📂 Category-Based Learning
+
+Learning is organized into familiar categories:
+
+- 🐶 Animals  
+- 🍎 Fruits  
+- 🏠 Daily Use Objects  
+- 🎒 School Objects  
+- 🔢 Numbers  
+- 🗣️ Simple Sentences  
+
+Each category contains **50+ words/sentences** based on syllabus level.
+
+---
+
+### 🎧 Interactive Learning System
+
+- 🔊 **Listen** → Hear correct pronunciation using Text-to-Speech  
+- 🎤 **Speak** → Practice pronunciation using voice input  
+- 📊 **Feedback** → Instant evaluation:
+  - Excellent ✅  
+  - Very Good 👍  
+  - Try Again 🔁  
+
+---
+
+### 🧠 Pronunciation-Focused Learning
+
+- Helps students understand **correct sound patterns**
+- Designed especially for **Kannada medium students learning English**
+
+---
+
+### 📊 Progress Tracking
+
+- Tracks student performance
+- Stores scores using SQLite database
+- Helps monitor improvement over time
+
+---
+
+### 🎨 Child-Friendly UI
+
+- Clean and simple design
+- Large buttons and visuals
+- Easy navigation for young learners
+
+---
+
+## 🏫 Target Users
+
+- Government school students (1st & 2nd Standard)
+- Kannada medium students
+- Beginners learning English
+
+---
 
 ## 🛠️ Tech Stack
 
-- **Language**: Java
-- **UI Framework**: Android XML with Material Design 3 (M3)
-- **Database**: SQLite (Local storage for progress and favorites)
-- **APIs**:
+- **Language**: Java  
+- **UI**: Android XML + Material Design 3  
+- **Database**: SQLite  
+- **APIs Used**:
   - Android Text-to-Speech (TTS)
-  - Google Speech-to-Text (RecognizerIntent)
-- **Architecture**: Modular Data Management with a centralized `DataManager`.
+  - Speech Recognition (RecognizerIntent)
 
-## 📸 Screenshots
+---
 
-| Welcome Screen | Category Selection | Practice Mode |
-| --- | --- | --- |
-| ![Main](https://via.placeholder.com/200x400?text=Welcome+Screen) | ![Categories](https://via.placeholder.com/200x400?text=Categories) | ![Practice](https://via.placeholder.com/200x400?text=Practice+Mode) |
+## 📚 Learning Approach
 
-*(Note: Replace placeholders with actual screenshots from your device/emulator)*
+- Visual + Audio learning  
+- Repetition-based pronunciation practice  
+- Syllabus-aligned structured content  
+- Step-by-step learning progression  
 
-## 📥 Installation
+---
 
-1.  **Clone the repository**:
-    
+## 🔧 Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/PradeepTech-hub/BashaBridge.git
