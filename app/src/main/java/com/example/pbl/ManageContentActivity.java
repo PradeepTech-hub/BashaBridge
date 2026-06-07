@@ -69,7 +69,6 @@ public class ManageContentActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_manage_content);
 
-        CloudinaryHelper.init(this);
         db = FirebaseFirestore.getInstance();
         contentType = getIntent().getStringExtra("TYPE");
         if (contentType == null) contentType = "Words";
