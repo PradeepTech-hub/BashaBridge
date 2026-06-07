@@ -4,12 +4,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="?android:attr/colorBackground">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/surface">
+        android:background="?attr/colorSurface">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -35,7 +35,7 @@
             app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/outline">
+            app:strokeColor="?attr/colorOutline">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -51,7 +51,7 @@
                     android:text="How are you?"
                     android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                     android:textStyle="bold"
-                    android:textColor="@color/onSurface"
+                    android:textColor="?attr/colorOnSurface"
                     android:gravity="center"/>
 
                 <TextView
@@ -61,8 +61,17 @@
                     android:layout_marginTop="8dp"
                     android:text="Translation"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                    android:textColor="@color/primary"
+                    android:textColor="?attr/colorPrimary"
                     android:gravity="center"
+                    android:visibility="gone"/>
+
+                <ImageView
+                    android:id="@+id/ivSentenceImage"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_marginTop="16dp"
+                    android:scaleType="centerCrop"
+                    android:src="@android:drawable/ic_menu_gallery"
                     android:visibility="gone"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

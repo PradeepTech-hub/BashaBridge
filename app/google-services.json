@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "307626510616",
+    "project_id": "womensafety-9f158",
+    "storage_bucket": "womensafety-9f158.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:307626510616:android:292f70dcecacb0c1daf66d",
+        "android_client_info": {
+          "package_name": "com.example.pbl"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "307626510616-fahdfgv5mj689j11m25umiq95evu5jr0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pbl",
+            "certificate_hash": "40afaee6b13d74aefb459e3f044e4dce80d6355f"
+          }
+        },
+        {
+          "client_id": "307626510616-a6qavvfelk7litvkoqg3979l21oaksvd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdIfEcUvrMDlfFPoMXrUU17n4NLCTmd_s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "307626510616-a6qavvfelk7litvkoqg3979l21oaksvd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

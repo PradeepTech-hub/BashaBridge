@@ -7,24 +7,54 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 public class MainActivity extends AppCompatActivity {
 
     private MaterialButtonToggleGroup toggleGroupAppLanguage;
     private DBHelper dbHelper;
     private MediaPlayer mediaPlayer;
+    private int userStandard = 1; // Default
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
+    private ListenerRegistration userRegistration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+
+        if (mAuth.getCurrentUser() == null) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+
+        // Get standard from intent or Firestore
+        if (getIntent().hasExtra("USER_STANDARD")) {
+            String std = getIntent().getStringExtra("USER_STANDARD");
+            try {
+                userStandard = Integer.parseInt(std);
+            } catch (Exception e) {
+                userStandard = 1;
+            }
+        } else {
+            fetchUserStandard();
+        }
 
         // Animation
         androidx.core.widget.NestedScrollView rootLayout = findViewById(R.id.rootLayout);
@@ -61,6 +91,29 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.cardProgress).setOnClickListener(v -> {
             startActivity(new Intent(MainActivity.this, ProgressActivity.class));
         });
+
+        findViewById(R.id.btnLogout).setOnClickListener(v -> {
+            mAuth.signOut();
+            startActivity(new Intent(MainActivity.this, LoginActivity.class));
+            finish();
+        });
+    }
+
+    private void fetchUserStandard() {
+        String uid = mAuth.getCurrentUser().getUid();
+        userRegistration = db.collection("users").document(uid)
+                .addSnapshotListener((documentSnapshot, error) -> {
+                    if (error != null) return;
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
+                        String std = documentSnapshot.getString("standard");
+                        try {
+                            userStandard = Integer.parseInt(std);
+                            // Refresh UI or state if needed
+                        } catch (Exception e) {
+                            userStandard = 1;
+                        }
+                    }
+                });
     }
 
     private void updateAppLanguage(boolean isKannada) {
@@ -76,21 +129,23 @@ public class MainActivity extends AppCompatActivity {
             tvAppLangLabel.setText("ಅಪ್ಲಿಕೇಶನ್ ಭಾಷೆ");
             tvLangLabel.setText("ತರಬೇತಿ ಭಾಷೆ");
             tvCatLabel.setText("ವರ್ಗಗಳು");
-            ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("ಭಾಷಾಬ್ರಿಡ್ಜ್");
+            if (findViewById(R.id.toolbar) != null) {
+                ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("ಭಾಷಾಬ್ರಿಡ್ಜ್");
+            }
         } else {
             tvWelcome.setText("Welcome back!");
             tvSub.setText("Select a category to start practicing");
             tvAppLangLabel.setText("App Interface Language");
             tvLangLabel.setText("Practice Language");
             tvCatLabel.setText("Categories");
-            ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("BhashaBridge");
+            if (findViewById(R.id.toolbar) != null) {
+                ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("BhashaBridge");
+            }
         }
     }
 
     private void playWelcomeMusic() {
         try {
-            // Using a system sound or a professional simple melody if raw file not found
-            // In a real app, the user would provide 'app_welcome.mp3' in res/raw
             int resId = getResources().getIdentifier("welcome_music", "raw", getPackageName());
             if (resId != 0) {
                 mediaPlayer = MediaPlayer.create(this, resId);
@@ -106,6 +161,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (userRegistration != null) {
+            userRegistration.remove();
+        }
         if (mediaPlayer != null) {
             mediaPlayer.release();
             mediaPlayer = null;
@@ -116,11 +174,9 @@ public class MainActivity extends AppCompatActivity {
         findViewById(id).setOnClickListener(v -> {
             boolean isHindi = toggleGroup.getCheckedButtonId() == R.id.btnHindi;
             
-            // Animate scale
             v.animate().scaleX(0.95f).scaleY(0.95f).setDuration(100).withEndAction(() -> {
                 v.animate().scaleX(1f).scaleY(1f).setDuration(100).start();
                 
-                // Save as favorite category
                 dbHelper.setFavoriteCategory(category);
                 
                 Intent intent;
@@ -132,6 +188,7 @@ public class MainActivity extends AppCompatActivity {
 
                 intent.putExtra("CATEGORY", category);
                 intent.putExtra("IS_HINDI", isHindi);
+                intent.putExtra("STANDARD", userStandard);
                 startActivity(intent);
             }).start();
         });

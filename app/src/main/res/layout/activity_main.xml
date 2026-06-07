@@ -4,12 +4,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="?android:attr/colorBackground">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/surface">
+        android:background="?attr/colorSurface">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -17,7 +17,19 @@
             android:layout_height="?attr/actionBarSize"
             app:title="BhashaBridge"
             app:titleCentered="true"
-            app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
+            app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
+
+            <ImageButton
+                android:id="@+id/btnLogout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginEnd="16dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_lock_power_off"
+                app:tint="?attr/colorOnSurface"
+                android:contentDescription="Logout" />
+        </com.google.android.material.appbar.MaterialToolbar>
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -47,7 +59,7 @@
                 android:layout_height="wrap_content"
                 android:text="Select a language to start practicing"
                 android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                android:textColor="@color/onSurfaceVariant"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:layout_marginBottom="16dp"/>
 
             <com.google.android.material.card.MaterialCardView
@@ -56,7 +68,7 @@
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="@color/outline"
+                app:strokeColor="?attr/colorOutline"
                 android:layout_marginBottom="16dp">
 
                 <LinearLayout
@@ -106,7 +118,7 @@
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="@color/outline"
+                app:strokeColor="?attr/colorOutline"
                 android:layout_marginBottom="24dp">
 
                 <LinearLayout
@@ -353,7 +365,7 @@
                 android:layout_marginBottom="32dp"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="4dp"
-                app:cardBackgroundColor="@color/primaryContainer">
+                app:cardBackgroundColor="?attr/colorPrimaryContainer">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -364,7 +376,7 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_myplaces"
-                        app:tint="@color/primary"/>
+                        app:tint="?attr/colorPrimary"/>
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -376,13 +388,13 @@
                             android:layout_height="wrap_content"
                             android:text="My Progress"
                             android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                            android:textColor="@color/onPrimaryContainer"/>
+                            android:textColor="?attr/colorOnPrimaryContainer"/>
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Track your learning journey"
                             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                            android:textColor="@color/onPrimaryContainer"/>
+                            android:textColor="?attr/colorOnPrimaryContainer"/>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

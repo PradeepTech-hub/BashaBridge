@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">BashaBridge</string>
+    <!-- TODO: Replace with your real Web Client ID from Firebase Console -->
+    <string name="default_web_client_id">307626510616-a6qavvfelk7litvkoqg3979l21oaksvd.apps.googleusercontent.com</string>
+    <string name="select_role">Select Role</string>
+    <string name="student">Student</string>
+    <string name="teacher">Teacher</string>
+    <string name="welcome_teacher">Welcome, Teacher</string>
+    <string name="teacher_subtitle">Manage your classroom and curriculum</string>
+    <string name="curriculum_mgmt">Curriculum Management</string>
+    <string name="words">Words</string>
+    <string name="sentences">Sentences</string>
+    <string name="student_insights">Student Insights</string>
+    <string name="view_all_progress">View All Student Progress</string>
+    <string name="track_scores">Track scores and common mistakes</string>
+    <string name="class_performance">Class Performance</string>
+    <string name="performance_subtitle">Daily activity and participation</string>
+    <string name="student_label">Student: %1$s</string>
+    <string name="add_content">Add Content</string>
+    <string name="edit_content">Edit Content</string>
+    <string name="word_image">Word Image</string>
+    <string name="select_image">Select Image</string>
+    <string name="content_image">Content Image</string>
 </resources>

@@ -24,6 +24,11 @@
     <color name="outline">#79747E</color>
     <color name="error">#B3261E</color>
 
+    <!-- Feedback Colors -->
+    <color name="feedback_perfect">#2E7D32</color>
+    <color name="feedback_good">#F57C00</color>
+    <color name="feedback_neutral">#757575</color>
+
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 

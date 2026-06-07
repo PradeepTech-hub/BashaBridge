@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#D0BCFF</color>
+    <color name="onPrimary">#381E72</color>
+    <color name="primaryContainer">#4F378B</color>
+    <color name="onPrimaryContainer">#EADDFF</color>
+
+    <color name="secondary">#CCC2DC</color>
+    <color name="onSecondary">#332D41</color>
+    <color name="secondaryContainer">#4A4458</color>
+    <color name="onSecondaryContainer">#E8DEF8</color>
+
+    <color name="tertiary">#EFB8C8</color>
+    <color name="onTertiary">#492532</color>
+    <color name="tertiaryContainer">#633B48</color>
+    <color name="onTertiaryContainer">#FFD8E4</color>
+
+    <color name="background">#1C1B1F</color>
+    <color name="onBackground">#E6E1E5</color>
+    <color name="surface">#1C1B1F</color>
+    <color name="onSurface">#E6E1E5</color>
+    <color name="surfaceVariant">#49454F</color>
+    <color name="onSurfaceVariant">#CAC4D0</color>
+    <color name="outline">#938F99</color>
+    <color name="error">#F2B8B5</color>
+
+    <!-- Feedback Colors -->
+    <color name="feedback_perfect">#81C784</color>
+    <color name="feedback_good">#FFB74D</color>
+    <color name="feedback_neutral">#9E9E9E</color>
+
+    <!-- Category Specific Colors (Dark Mode variations) -->
+    <color name="cat_animals">#4A3935</color>
+    <color name="cat_fruits">#4A462D</color>
+    <color name="cat_daily">#2D3D4A</color>
+    <color name="cat_school">#2D4A32</color>
+    <color name="cat_numbers">#3F2D4A</color>
+    <color name="cat_sentences">#2D4A46</color>
+</resources>

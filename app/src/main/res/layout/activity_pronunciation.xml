@@ -4,12 +4,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="?android:attr/colorBackground">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/surface">
+        android:background="?attr/colorSurface">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -33,7 +33,7 @@
             android:layout_height="wrap_content"
             android:text="Animals"
             android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-            android:textColor="@color/primary"
+            android:textColor="?attr/colorPrimary"
             android:layout_gravity="center_horizontal"
             android:layout_marginBottom="24dp"/>
 
@@ -43,7 +43,7 @@
             app:cardCornerRadius="32dp"
             app:cardElevation="8dp"
             app:strokeWidth="4dp"
-            app:strokeColor="@color/primary"
+            app:strokeColor="?attr/colorPrimary"
             android:layout_marginHorizontal="8dp"
             android:layout_marginBottom="32dp">
 
@@ -52,7 +52,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="@color/surfaceVariant"
+                android:background="?attr/colorSurfaceVariant"
                 android:padding="24dp">
 
                 <com.google.android.material.card.MaterialCardView
@@ -60,7 +60,7 @@
                     android:layout_height="220dp"
                     app:cardCornerRadius="24dp"
                     app:cardElevation="0dp"
-                    app:cardBackgroundColor="@color/white">
+                    app:cardBackgroundColor="?attr/colorSurface">
 
                     <ImageView
                         android:id="@+id/ivWordImage"
@@ -79,7 +79,7 @@
                     android:text="Apple"
                     android:textAppearance="@style/TextAppearance.Material3.HeadlineLarge"
                     android:textStyle="bold"
-                    android:textColor="@color/onSurface"/>
+                    android:textColor="?attr/colorOnSurface"/>
 
                 <TextView
                     android:id="@+id/tvHindiMeaning"
@@ -87,7 +87,7 @@
                     android:layout_height="wrap_content"
                     android:text="ಸೇಬು"
                     android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                    android:textColor="@color/primary"/>
+                    android:textColor="?attr/colorPrimary"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -104,8 +104,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="32dp"
                 android:src="@android:drawable/ic_lock_silent_mode_off"
-                app:backgroundTint="@color/secondaryContainer"
-                app:tint="@color/onSecondaryContainer"
+                app:backgroundTint="?attr/colorSecondaryContainer"
+                app:tint="?attr/colorOnSecondaryContainer"
                 android:contentDescription="Listen" />
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -114,8 +114,8 @@
                 android:layout_height="wrap_content"
                 android:src="@android:drawable/presence_audio_online"
                 app:fabSize="normal"
-                app:backgroundTint="@color/primary"
-                app:tint="@color/onPrimary"
+                app:backgroundTint="?attr/colorPrimary"
+                app:tint="?attr/colorOnPrimary"
                 android:contentDescription="Record" />
         </LinearLayout>
 

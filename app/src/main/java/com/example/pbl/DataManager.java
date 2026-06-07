@@ -112,6 +112,38 @@ public class DataManager {
 
     public static List<Word> getWordsForCategory(int standard, String category) {
         Map<String, List<Word>> classData = standardData.getOrDefault(standard, new HashMap<>());
-        return classData.getOrDefault(category, new ArrayList<>());
+        List<Word> originals = classData.getOrDefault(category, new ArrayList<>());
+        List<Word> copies = new ArrayList<>();
+        for (Word w : originals) {
+            Word copy = new Word(w.getEnglish(), w.getKannada(), w.getHindi(), w.getImageResId());
+            copy.setStandard(standard);
+            copy.setCategory(category);
+            copies.add(copy);
+        }
+        return copies;
+    }
+
+    public static List<Word> getAllDefaultContent(String type) {
+        List<Word> allContent = new ArrayList<>();
+        boolean isSentences = "Sentences".equalsIgnoreCase(type);
+
+        for (Map.Entry<Integer, Map<String, List<Word>>> entry : standardData.entrySet()) {
+            int standard = entry.getKey();
+            for (Map.Entry<String, List<Word>> catEntry : entry.getValue().entrySet()) {
+                String category = catEntry.getKey();
+                boolean isCategorySentences = "Sentences".equalsIgnoreCase(category);
+
+                if ((isSentences && isCategorySentences) || (!isSentences && !isCategorySentences)) {
+                    for (Word w : catEntry.getValue()) {
+                        // Create a copy to avoid modifying the static data shared across the app
+                        Word copy = new Word(w.getEnglish(), w.getKannada(), w.getHindi(), w.getImageResId());
+                        copy.setStandard(standard);
+                        copy.setCategory(category);
+                        allContent.add(copy);
+                    }
+                }
+            }
+        }
+        return allContent;
     }
 }
