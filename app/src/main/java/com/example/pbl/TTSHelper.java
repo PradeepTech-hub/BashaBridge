@@ -45,6 +45,13 @@ public class TTSHelper {
         }
     }
 
+    public void setSpeechRate(float rate) {
+        if (tts != null) {
+            tts.setPitch(1.0f);
+            tts.setSpeechRate(rate);
+        }
+    }
+
     public void shutdown() {
         if (tts != null) {
             tts.stop();

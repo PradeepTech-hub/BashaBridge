@@ -15,7 +15,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="My Progress"
+            app:title="Class Statistics"
             app:titleCentered="true"
             app:navigationIcon="@android:drawable/ic_menu_revert" />
     </com.google.android.material.appbar.AppBarLayout>
@@ -38,11 +38,9 @@
 
                 <!-- Overview Grid -->
                 <GridLayout
-                    android:id="@+id/layoutStudentStats"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:columnCount="2"
-                    android:rowCount="3"
                     android:alignmentMode="alignMargins"
                     android:columnOrderPreserved="false"
                     android:layout_marginBottom="16dp">
@@ -62,7 +60,7 @@
                             android:padding="16dp"
                             android:gravity="center">
                             <TextView
-                                android:id="@+id/tvTotalWords"
+                                android:id="@+id/tvTotalStudents"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
@@ -71,39 +69,9 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/total_words"
+                                android:text="Total Students"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                                 android:textColor="@color/onPrimaryContainer"/>
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_columnWeight="1"
-                        android:layout_margin="4dp"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="0dp"
-                        app:cardBackgroundColor="@color/secondaryContainer">
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="16dp"
-                            android:gravity="center">
-                            <TextView
-                                android:id="@+id/tvTotalSentences"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="0"
-                                android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
-                                android:textColor="@color/onSecondaryContainer"/>
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/total_sentences"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                                android:textColor="@color/onSecondaryContainer"/>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
@@ -122,7 +90,7 @@
                             android:padding="16dp"
                             android:gravity="center">
                             <TextView
-                                android:id="@+id/tvAvgAccuracy"
+                                android:id="@+id/tvClassAvgAccuracy"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0%"
@@ -131,9 +99,39 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/accuracy"
+                                android:text="Class Avg. Accuracy"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                                 android:textColor="@color/onTertiaryContainer"/>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="4dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="@color/secondaryContainer">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp"
+                            android:gravity="center">
+                            <TextView
+                                android:id="@+id/tvTotalAttempts"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+                                android:textColor="@color/onSecondaryContainer"/>
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Practice Sessions"
+                                android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                                android:textColor="@color/onSecondaryContainer"/>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
@@ -152,7 +150,7 @@
                             android:padding="16dp"
                             android:gravity="center">
                             <TextView
-                                android:id="@+id/tvTotalXP"
+                                android:id="@+id/tvTotalClassXP"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
@@ -161,20 +159,42 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/total_xp"
+                                android:text="Class Total XP"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                                 android:textColor="#2E7D32"/>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
                 </GridLayout>
 
-                <!-- Insights Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Student Rankings"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="12dp"
+                    android:layout_marginStart="4dp"/>
+
+                <LinearLayout
+                    android:id="@+id/llRankingContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Common Challenges"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="12dp"
+                    android:layout_marginStart="4dp"/>
+
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardInsights"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="24dp"
-                    app:cardCornerRadius="24dp"
+                    app:cardCornerRadius="20dp"
                     app:cardElevation="0dp"
                     app:cardBackgroundColor="@color/surfaceVariant">
                     <LinearLayout
@@ -183,89 +203,21 @@
                         android:orientation="vertical"
                         android:padding="20dp">
                         <TextView
+                            android:id="@+id/tvDifficultCategory"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/performance_insights"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                            android:layout_marginBottom="12dp"/>
-
+                            android:text="Hardest Category: Loading..."
+                            android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                            android:layout_marginBottom="8dp"/>
                         <TextView
-                            android:id="@+id/tvFavCategory"
+                            android:id="@+id/tvDifficultWords"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Favorite: Loading..."
+                            android:text="Hardest Words: Loading..."
                             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                            android:layout_marginBottom="4dp"/>
-
-                        <TextView
-                            android:id="@+id/tvWeakestCategory"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Needs Work: Loading..."
-                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                            android:layout_marginBottom="4dp"/>
-
-                        <TextView
-                            android:id="@+id/tvBestScore"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Best Score: 0%"
-                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                            android:layout_marginBottom="4dp"/>
-
-                        <TextView
-                            android:id="@+id/tvLastPractice"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Last Session: Never"
-                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"/>
+                            android:textColor="@color/error"/>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/practice_history"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                    android:layout_marginBottom="12dp"
-                    android:layout_marginStart="4dp"/>
-
-                <LinearLayout
-                    android:id="@+id/llHistoryContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"/>
-
-                <ListView
-                    android:id="@+id/lvProgress"
-                    android:layout_width="match_parent"
-                    android:layout_height="400dp"
-                    android:divider="@android:color/transparent"
-                    android:dividerHeight="12dp"
-                    android:clipToPadding="false"
-                    android:paddingBottom="16dp"
-                    android:visibility="gone"
-                    tools:listitem="@android:layout/simple_list_item_2"/>
-
-                <TextView
-                    android:id="@+id/tvWeakWords"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Weak Words: None"
-                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                    android:textColor="@color/error"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="8dp"
-                    android:visibility="gone"/>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnClearProgress"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/reset_local_progress"
-                    android:textColor="@color/error"
-                    android:layout_marginTop="8dp"/>
 
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>

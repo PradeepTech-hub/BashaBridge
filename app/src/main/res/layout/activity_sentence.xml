@@ -83,14 +83,29 @@
             android:gravity="center"
             android:layout_marginBottom="32dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnListen"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="240dp"
-                android:layout_height="64dp"
-                android:text="Listen Sentence"
-                app:icon="@android:drawable/ic_lock_silent_mode_off"
-                android:layout_marginBottom="16dp"/>
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSlowListen"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="64dp"
+                    android:text="🐢 Slow"
+                    android:layout_marginEnd="8dp"
+                    app:icon="@android:drawable/ic_lock_silent_mode_off"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnListen"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="64dp"
+                    android:text="Listen"
+                    app:icon="@android:drawable/ic_lock_silent_mode_off"/>
+            </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnRecord"
@@ -98,7 +113,15 @@
                 android:layout_height="64dp"
                 android:text="Repeat Sentence"
                 app:icon="@android:drawable/presence_audio_online"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRetry"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔄 Retry"
+                android:visibility="invisible"/>
         </LinearLayout>
 
         <TextView

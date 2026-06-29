@@ -10,6 +10,9 @@ import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -30,6 +33,11 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private ListenerRegistration userRegistration;
 
+    // New UI Elements
+    private TextView tvStreakCount, tvXPCount, tvDailyGoal, tvLastCategory;
+    private com.google.android.material.progressindicator.LinearProgressIndicator 
+            progressAnimals, progressFruits, progressDaily, progressSchool, progressNumbers, progressSentences;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,23 +45,29 @@ public class MainActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        dbHelper = new DBHelper(this);
+
+        // --- Trigger Background Sync ---
+        SyncManager.getInstance(this).syncProgress();
+        SyncManager.getInstance(this).downloadContent();
 
         if (mAuth.getCurrentUser() == null) {
+            // Check if we have a cached user for offline
+            // Usually, FirebaseAuth persists sessions, but this is an extra layer
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
         }
 
-        // Get standard from intent or Firestore
-        if (getIntent().hasExtra("USER_STANDARD")) {
-            String std = getIntent().getStringExtra("USER_STANDARD");
-            try {
-                userStandard = Integer.parseInt(std);
-            } catch (Exception e) {
-                userStandard = 1;
-            }
-        } else {
-            fetchUserStandard();
+        initViews();
+        loadUserData();
+        updateCategoryProgress();
+        
+        // Show Offline Indicator
+        if (!SyncManager.getInstance(this).isOnline()) {
+            Toast.makeText(this, "Working in Offline Mode", Toast.LENGTH_LONG).show();
+            TextView tvSub = findViewById(R.id.tvSub);
+            tvSub.setText(tvSub.getText() + " (Offline)");
         }
 
         // Animation
@@ -92,6 +106,10 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(MainActivity.this, ProgressActivity.class));
         });
 
+        findViewById(R.id.btnSettings).setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+        });
+
         findViewById(R.id.btnLogout).setOnClickListener(v -> {
             mAuth.signOut();
             startActivity(new Intent(MainActivity.this, LoginActivity.class));
@@ -99,21 +117,120 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void fetchUserStandard() {
+    private void initViews() {
+        tvStreakCount = findViewById(R.id.tvStreakCount);
+        tvXPCount = findViewById(R.id.tvXPCount);
+        tvDailyGoal = findViewById(R.id.tvDailyGoal);
+        tvLastCategory = findViewById(R.id.tvLastCategory);
+
+        progressAnimals = findViewById(R.id.progressAnimals);
+        progressFruits = findViewById(R.id.progressFruits);
+        progressDaily = findViewById(R.id.progressDaily);
+        progressSchool = findViewById(R.id.progressSchool);
+        progressNumbers = findViewById(R.id.progressNumbers);
+        progressSentences = findViewById(R.id.progressSentences);
+
+        findViewById(R.id.btnContinue).setOnClickListener(v -> resumeLastCategory());
+    }
+
+    private void loadUserData() {
         String uid = mAuth.getCurrentUser().getUid();
         userRegistration = db.collection("users").document(uid)
                 .addSnapshotListener((documentSnapshot, error) -> {
                     if (error != null) return;
                     if (documentSnapshot != null && documentSnapshot.exists()) {
-                        String std = documentSnapshot.getString("standard");
-                        try {
-                            userStandard = Integer.parseInt(std);
-                            // Refresh UI or state if needed
-                        } catch (Exception e) {
-                            userStandard = 1;
+                        User user = documentSnapshot.toObject(User.class);
+                        if (user != null) {
+                            userStandard = Integer.parseInt(user.getStandard() != null ? user.getStandard() : "1");
+                            updateDashboardUI(user);
+                            checkAndUpdateStreak(user);
                         }
                     }
                 });
+    }
+
+    private void updateDashboardUI(User user) {
+        tvStreakCount.setText(String.valueOf(user.getStreak()));
+        tvXPCount.setText(String.valueOf(user.getXp()));
+        
+        // Simple daily goal: 5 words/sentences today
+        // This would ideally come from a sub-collection 'daily_stats'
+        tvDailyGoal.setText("0/5"); 
+        
+        String lastCat = dbHelper.getFavoriteCategory();
+        tvLastCategory.setText(lastCat.equals("None") ? "Start your first lesson!" : "Next: " + lastCat);
+    }
+
+    private void checkAndUpdateStreak(User user) {
+        long now = System.currentTimeMillis();
+        long lastActive = user.getLastActive();
+        
+        // Simple streak logic: if last active was yesterday, increment. If today, keep. If before yesterday, reset.
+        java.util.Calendar calToday = java.util.Calendar.getInstance();
+        java.util.Calendar calLast = java.util.Calendar.getInstance();
+        calLast.setTimeInMillis(lastActive);
+
+        boolean isSameDay = calToday.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
+                          calToday.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR);
+
+        if (!isSameDay) {
+            calToday.add(java.util.Calendar.DAY_OF_YEAR, -1);
+            boolean isYesterday = calToday.get(java.util.Calendar.YEAR) == calLast.get(java.util.Calendar.YEAR) &&
+                                 calToday.get(java.util.Calendar.DAY_OF_YEAR) == calLast.get(java.util.Calendar.DAY_OF_YEAR);
+
+            int newStreak = isYesterday ? user.getStreak() + 1 : 1;
+            
+            db.collection("users").document(user.getUid())
+                    .update("streak", newStreak, "lastActive", now);
+        }
+    }
+
+    private void updateCategoryProgress() {
+        // Fetch progress for each category from local DB
+        progressAnimals.setProgress(calculateProgress("Animals"));
+        progressFruits.setProgress(calculateProgress("Fruits"));
+        progressDaily.setProgress(calculateProgress("Daily Use"));
+        progressSchool.setProgress(calculateProgress("School Objects"));
+        progressNumbers.setProgress(calculateProgress("Numbers"));
+        progressSentences.setProgress(calculateProgress("Sentences"));
+    }
+
+    private int calculateProgress(String category) {
+        // This is a simplified progress calculation. 
+        // In a real app, it would be (learned_words / total_words_in_category) * 100
+        ArrayList<HashMap<String, String>> progressList = dbHelper.getAllProgress();
+        int count = 0;
+        for (HashMap<String, String> p : progressList) {
+            if (category.equals(p.get("category"))) {
+                count++;
+            }
+        }
+        return Math.min(count * 10, 100); // 10% per word for demo
+    }
+
+    private void resumeLastCategory() {
+        String lastCat = dbHelper.getFavoriteCategory();
+        if (!lastCat.equals("None")) {
+            MaterialButtonToggleGroup toggleGroupLanguage = findViewById(R.id.toggleGroupLanguage);
+            boolean isHindi = toggleGroupLanguage.getCheckedButtonId() == R.id.btnHindi;
+            
+            Intent intent;
+            if (lastCat.equals("Sentences")) {
+                intent = new Intent(this, SentenceActivity.class);
+            } else {
+                intent = new Intent(this, PronunciationActivity.class);
+            }
+            intent.putExtra("CATEGORY", lastCat);
+            intent.putExtra("IS_HINDI", isHindi);
+            intent.putExtra("STANDARD", userStandard);
+            startActivity(intent);
+        } else {
+            Toast.makeText(this, "Select a category to begin!", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void fetchUserStandard() {
+        // Removed as it is now handled in loadUserData
     }
 
     private void updateAppLanguage(boolean isKannada) {

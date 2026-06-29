@@ -32,15 +32,20 @@ public class PronunciationActivity extends AppCompatActivity {
     private boolean isHindiMode;
     private int currentIndex = 0;
     private int selectedStandard;
+    private int totalXP = 0;
+    private int masteredCount = 0;
+    private List<Integer> scores = new ArrayList<>();
 
     private List<Word> wordList;
 
     private TextView tvCategoryTitle, tvTargetWord, tvTranslation, tvUserSpeech, tvFeedback;
     private ImageView ivWordImage;
+    private com.google.android.material.button.MaterialButton btnSlowListen, btnRetry;
     private TTSHelper ttsHelper;
     private DBHelper dbHelper;
     private FirebaseFirestore db;
     private ListenerRegistration registration;
+    private float ttsSpeed = 1.0f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,8 +67,11 @@ public class PronunciationActivity extends AppCompatActivity {
         tvFeedback = findViewById(R.id.tvFeedback);
         ivWordImage = findViewById(R.id.ivWordImage);
         
+        btnSlowListen = findViewById(R.id.btnSlowListen);
+        btnRetry = findViewById(R.id.btnRetry);
         FloatingActionButton btnListen = findViewById(R.id.btnListen);
         FloatingActionButton btnRecord = findViewById(R.id.btnRecord);
+        
         findViewById(R.id.btnNextWord).setOnClickListener(v -> nextWord());
         findViewById(R.id.btnPrevWord).setOnClickListener(v -> prevWord());
 
@@ -81,16 +89,51 @@ public class PronunciationActivity extends AppCompatActivity {
         loadFirestoreData();
 
         btnListen.setOnClickListener(v -> {
-            if (!wordList.isEmpty()) {
-                String text = isHindiMode ? wordList.get(currentIndex).getHindi() : wordList.get(currentIndex).getEnglish();
-                ttsHelper.speak(text);
-            }
+            ttsSpeed = 1.0f;
+            speakCurrentWord();
+        });
+
+        btnSlowListen.setOnClickListener(v -> {
+            ttsSpeed = 0.5f;
+            speakCurrentWord();
+        });
+
+        btnRetry.setOnClickListener(v -> {
+            tvUserSpeech.setText("You said: ...");
+            tvFeedback.setText("Feedback");
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_neutral));
+            btnRetry.setVisibility(android.view.View.INVISIBLE);
         });
         
         btnRecord.setOnClickListener(v -> SpeechHelper.startListening(this, isHindiMode));
     }
 
+    private void speakCurrentWord() {
+        if (!wordList.isEmpty()) {
+            String text = isHindiMode ? wordList.get(currentIndex).getHindi() : wordList.get(currentIndex).getEnglish();
+            ttsHelper.setSpeechRate(ttsSpeed);
+            ttsHelper.speak(text);
+        }
+    }
+
     private void loadFirestoreData() {
+        // --- Try Offline Content First ---
+        List<Word> offlineWords = dbHelper.getOfflineContent(selectedStandard, category, "Word");
+        if (!offlineWords.isEmpty()) {
+            wordList.clear();
+            wordList.addAll(offlineWords);
+            updateUI();
+        }
+
+        if (!SyncManager.getInstance(this).isOnline()) {
+            if (wordList.isEmpty()) {
+                // Fallback to static data if no offline cache
+                wordList.addAll(DataManager.getWordsForCategory(selectedStandard, category));
+                updateUI();
+            }
+            return;
+        }
+
         registration = db.collection("words")
                 .whereEqualTo("standard", selectedStandard)
                 .whereEqualTo("category", category)
@@ -121,6 +164,9 @@ public class PronunciationActivity extends AppCompatActivity {
                                 word.setId(document.getId());
                                 String key = (word.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
                                 mergedMap.put(key, word);
+                                
+                                // Cache for offline
+                                dbHelper.saveContent(word, "Word");
                             } catch (Exception e) {
                                 Log.e(TAG, "Error parsing Firestore document", e);
                             }
@@ -162,13 +208,33 @@ public class PronunciationActivity extends AppCompatActivity {
         tvUserSpeech.setText("You said: ...");
         tvFeedback.setText("Feedback");
         tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_neutral));
+        btnRetry.setVisibility(android.view.View.INVISIBLE);
     }
 
     private void nextWord() {
         if (currentIndex < wordList.size() - 1) {
             currentIndex++;
             updateUI();
+        } else {
+            showSummary();
         }
+    }
+
+    private void showSummary() {
+        int avgScore = 0;
+        if (!scores.isEmpty()) {
+            int sum = 0;
+            for (int s : scores) sum += s;
+            avgScore = sum / scores.size();
+        }
+
+        Intent intent = new Intent(this, LessonCompletionActivity.class);
+        intent.putExtra("TOTAL_XP", totalXP);
+        intent.putExtra("ACCURACY", avgScore);
+        intent.putExtra("MASTERED_COUNT", masteredCount);
+        intent.putExtra("TOTAL_COUNT", wordList.size());
+        startActivity(intent);
+        finish();
     }
 
     private void prevWord() {
@@ -194,24 +260,99 @@ public class PronunciationActivity extends AppCompatActivity {
     private void evaluate(String spoken) {
         Word currentWord = wordList.get(currentIndex);
         String target = (isHindiMode ? currentWord.getHindi() : currentWord.getEnglish()).toLowerCase().trim();
-        String input = spoken.toLowerCase().trim();
+        String input = NumberUtils.normalizeNumbers(spoken.toLowerCase().trim());
+        target = NumberUtils.normalizeNumbers(target);
 
-        int score = 0;
-        if (input.equals(target)) {
-            score = 100;
-            tvFeedback.setText("Excellent! 🌟");
-            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_perfect));
-        } else {
-            score = 40;
-            tvFeedback.setText("Try Again 🔄");
-            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.error));
-        }
+        int score = calculateFuzzyScore(target, input);
+        scores.add(score);
+        if (score >= 80) masteredCount++;
         
-        // Save to Local DB
+        updateFeedbackUI(score);
+        
+        String uid = FirebaseAuth.getInstance().getUid();
+        
+        // Save to Local DB (History)
         dbHelper.insertProgress(target, score, category);
         
-        // Save to Firestore Progress Collection
-        saveProgressToFirestore(target, score);
+        // --- Offline Sync Support ---
+        if (SyncManager.getInstance(this).isOnline()) {
+            saveProgressToFirestore(target, score);
+            if (score >= 60) {
+                int xp = score / 10;
+                totalXP += xp;
+                updateUserXP(xp);
+            }
+        } else if (uid != null) {
+            dbHelper.addToSyncQueue(uid, target, score, category);
+            // Update local user cache XP
+            User localUser = dbHelper.getUser(uid);
+            if (localUser != null && score >= 60) {
+                int xp = score / 10;
+                totalXP += xp;
+                localUser.setXp(localUser.getXp() + xp);
+                dbHelper.saveUser(localUser);
+            }
+        }
+    }
+
+    private void updateFeedbackUI(int score) {
+        if (score >= 95) {
+            tvFeedback.setText("Excellent! 🌟 (" + score + "%)");
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_perfect));
+            btnRetry.setVisibility(android.view.View.INVISIBLE);
+        } else if (score >= 80) {
+            tvFeedback.setText("Great Job! 👍 (" + score + "%)");
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_perfect));
+            btnRetry.setVisibility(android.view.View.VISIBLE);
+        } else if (score >= 60) {
+            tvFeedback.setText("Good Try! 🙂 (" + score + "%)");
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_good));
+            btnRetry.setVisibility(android.view.View.VISIBLE);
+        } else {
+            tvFeedback.setText("Keep Practicing! 🔄 (" + score + "%)");
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.error));
+            btnRetry.setVisibility(android.view.View.VISIBLE);
+        }
+    }
+
+    private int calculateFuzzyScore(String target, String input) {
+        if (target.isEmpty() || input.isEmpty()) return 0;
+        if (target.equals(input)) return 100;
+
+        int distance = LevenshteinDistance(target, input);
+        int maxLength = Math.max(target.length(), input.length());
+        
+        float score = (1.0f - (float) distance / maxLength) * 100;
+        return Math.max(0, Math.round(score));
+    }
+
+    private int LevenshteinDistance(String s1, String s2) {
+        int[][] dp = new int[s1.length() + 1][s2.length() + 1];
+
+        for (int i = 0; i <= s1.length(); i++) {
+            for (int j = 0; j <= s2.length(); j++) {
+                if (i == 0) {
+                    dp[i][j] = j;
+                } else if (j == 0) {
+                    dp[i][j] = i;
+                } else {
+                    dp[i][j] = Math.min(Math.min(
+                            dp[i - 1][j] + 1,
+                            dp[i][j - 1] + 1),
+                            dp[i - 1][j - 1] + (s1.charAt(i - 1) == s2.charAt(j - 1) ? 0 : 1)
+                    );
+                }
+            }
+        }
+        return dp[s1.length()][s2.length()];
+    }
+
+    private void updateUserXP(int xpToAdd) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
+
+        db.collection("users").document(uid)
+                .update("xp", com.google.firebase.firestore.FieldValue.increment(xpToAdd));
     }
 
     private void saveProgressToFirestore(String word, int score) {

@@ -2,14 +2,17 @@ package com.example.pbl;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
@@ -17,15 +20,22 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 
 public class ProgressActivity extends AppCompatActivity {
 
     private static final String TAG = "ProgressActivity";
     private ListView lvProgress;
-    private TextView tvFavCategory, tvWeakWords;
+    private LinearLayout llHistoryContainer;
+    private TextView tvFavCategory, tvWeakWords, tvWeakestCategory, tvBestScore, tvLastPractice;
+    private TextView tvTotalWords, tvTotalSentences, tvAvgAccuracy, tvTotalXP;
+    private SwipeRefreshLayout swipeRefresh;
+    
     private DBHelper dbHelper;
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
@@ -45,22 +55,72 @@ public class ProgressActivity extends AppCompatActivity {
         dbHelper = new DBHelper(this);
         
         isTeacherView = getIntent().getBooleanExtra("IS_TEACHER_VIEW", false);
+        
+        // --- Role-based Access Control ---
+        String uid = mAuth.getUid();
+        if (uid == null) {
+            finish();
+            return;
+        }
 
+        if (isTeacherView) {
+            User currentUser = dbHelper.getUser(uid);
+            if (currentUser != null && "teacher".equalsIgnoreCase(currentUser.getRole())) {
+                initializeProgressView();
+            } else {
+                // Fallback to Firestore
+                db.collection("users").document(uid).get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            User remoteUser = documentSnapshot.toObject(User.class);
+                            if (remoteUser != null && "teacher".equalsIgnoreCase(remoteUser.getRole())) {
+                                remoteUser.setUid(uid);
+                                dbHelper.saveUser(remoteUser);
+                                initializeProgressView();
+                            } else {
+                                Toast.makeText(this, "Access Denied: Teacher role required", Toast.LENGTH_SHORT).show();
+                                finish();
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            Toast.makeText(this, "Access Denied: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            finish();
+                        });
+            }
+        } else {
+            initializeProgressView();
+        }
+    }
+
+    private void initializeProgressView() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         if (isTeacherView) {
             toolbar.setTitle("Class Progress");
         }
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        lvProgress = findViewById(R.id.lvProgress);
+        // Overview & Insights
+        tvTotalWords = findViewById(R.id.tvTotalWords);
+        tvTotalSentences = findViewById(R.id.tvTotalSentences);
+        tvAvgAccuracy = findViewById(R.id.tvAvgAccuracy);
+        tvTotalXP = findViewById(R.id.tvTotalXP);
+        
         tvFavCategory = findViewById(R.id.tvFavCategory);
+        tvWeakestCategory = findViewById(R.id.tvWeakestCategory);
+        tvBestScore = findViewById(R.id.tvBestScore);
+        tvLastPractice = findViewById(R.id.tvLastPractice);
+        
+        swipeRefresh = findViewById(R.id.swipeRefresh);
+        llHistoryContainer = findViewById(R.id.llHistoryContainer);
+        lvProgress = findViewById(R.id.lvProgress);
         tvWeakWords = findViewById(R.id.tvWeakWords);
         Button btnClearProgress = findViewById(R.id.btnClearProgress);
         
         if (isTeacherView) {
-            tvFavCategory.setVisibility(View.GONE);
+            findViewById(R.id.layoutStudentStats).setVisibility(View.GONE);
+            findViewById(R.id.cardInsights).setVisibility(View.GONE);
             tvWeakWords.setVisibility(View.GONE);
             btnClearProgress.setVisibility(View.GONE);
+            lvProgress.setVisibility(View.VISIBLE);
             
             displayData = new ArrayList<>();
             String[] from = {"word", "score", "category", "student"};
@@ -80,25 +140,50 @@ public class ProgressActivity extends AppCompatActivity {
             loadAllStudentsProgress();
         } else {
             displayData = new ArrayList<>();
-            String[] from = {"word", "score", "category"};
-            int[] to = {R.id.tvProgressWord, R.id.tvProgressScore, R.id.tvProgressCategory};
-            adapter = new SimpleAdapter(this, displayData, R.layout.progress_item, from, to);
-            lvProgress.setAdapter(adapter);
-
-            loadLocalProgress();
-            loadFirestoreProgress();
+            refreshProgress();
         }
 
-        btnClearProgress.setOnClickListener(v -> {
-            dbHelper.getWritableDatabase().execSQL("DELETE FROM " + DBHelper.TABLE_PROGRESS);
-            displayData.clear();
-            adapter.notifyDataSetChanged();
-            loadLocalProgress();
-            Toast.makeText(this, "Local progress cleared", Toast.LENGTH_SHORT).show();
+        swipeRefresh.setOnRefreshListener(this::refreshProgress);
+
+        if (btnClearProgress != null) {
+            btnClearProgress.setOnClickListener(v -> {
+                dbHelper.getWritableDatabase().execSQL("DELETE FROM " + DBHelper.TABLE_PROGRESS);
+                refreshProgress();
+                Toast.makeText(this, "Local progress cleared", Toast.LENGTH_SHORT).show();
+            });
+        }
+    }
+
+    private void refreshProgress() {
+        if (isTeacherView) {
+            loadAllStudentsProgress();
+            return;
+        }
+        
+        displayData.clear();
+        llHistoryContainer.removeAllViews();
+        
+        loadLocalProgress();
+        loadFirestoreProgress();
+        loadUserXP();
+        
+        swipeRefresh.setRefreshing(false);
+    }
+
+    private void loadUserXP() {
+        String uid = mAuth.getUid();
+        if (uid == null) return;
+        
+        db.collection("users").document(uid).get().addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                long xp = doc.getLong("xp") != null ? doc.getLong("xp") : 0;
+                tvTotalXP.setText(String.valueOf(xp));
+            }
         });
     }
 
     private void loadAllStudentsProgress() {
+        swipeRefresh.setRefreshing(true);
         db.collection("progress")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .limit(100)
@@ -112,15 +197,15 @@ public class ProgressActivity extends AppCompatActivity {
                         map.put("score", "Score: " + doc.get("score"));
                         map.put("category", "Category: " + doc.getString("category"));
                         
-                        // Default while loading or fallback
                         map.put("student", "Student: " + uid);
                         displayData.add(map);
-
                         resolveStudentInfo(uid, map);
                     }
                     adapter.notifyDataSetChanged();
+                    swipeRefresh.setRefreshing(false);
                 })
                 .addOnFailureListener(e -> {
+                    swipeRefresh.setRefreshing(false);
                     Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
@@ -152,26 +237,62 @@ public class ProgressActivity extends AppCompatActivity {
     }
 
     private void loadLocalProgress() {
+        // Update Stats
+        HashMap<String, Object> stats = dbHelper.getProgressStats();
+        tvTotalWords.setText(String.valueOf(stats.get("totalWords")));
+        tvTotalSentences.setText(String.valueOf(stats.get("totalSentences")));
+        tvAvgAccuracy.setText(stats.get("averageAccuracy") + "%");
+        tvBestScore.setText("Best Score: " + stats.get("bestScore") + "%");
+        tvWeakestCategory.setText("Needs Work: " + stats.get("weakestCategory"));
+
         String fav = dbHelper.getFavoriteCategory();
-        tvFavCategory.setText("Your Favorite Category: " + fav);
+        tvFavCategory.setText("Favorite: " + fav);
 
         List<String> weak = dbHelper.getWeakWords();
         if (!weak.isEmpty()) {
             tvWeakWords.setVisibility(View.VISIBLE);
-            tvWeakWords.setText("Weak Words (Needs Practice): " + String.join(", ", weak));
+            tvWeakWords.setText("Weak Words: " + String.join(", ", weak));
         } else {
             tvWeakWords.setVisibility(View.GONE);
         }
 
         ArrayList<HashMap<String, String>> localData = dbHelper.getAllProgress();
         for (HashMap<String, String> item : localData) {
-            HashMap<String, String> map = new HashMap<>();
-            map.put("word", item.get("word"));
-            map.put("score", "Score: " + item.get("score") + " (Local)");
-            map.put("category", "Category: " + item.get("category"));
-            displayData.add(map);
+            addHistoryItem(item.get("word"), item.get("score"), item.get("category"), "Local");
         }
-        adapter.notifyDataSetChanged();
+
+        // Add Category Progress Bars
+        addCategoryProgress();
+    }
+
+    private void addCategoryProgress() {
+        ArrayList<HashMap<String, Object>> catProgress = dbHelper.getCategoryProgress();
+        if (catProgress.isEmpty()) return;
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText("Category Progress");
+        tvTitle.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleLarge);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, 32, 0, 16);
+        tvTitle.setLayoutParams(params);
+        llHistoryContainer.addView(tvTitle, 0);
+
+        for (int i = 0; i < catProgress.size(); i++) {
+            HashMap<String, Object> item = catProgress.get(i);
+            String category = (String) item.get("category");
+            int score = (int) item.get("score");
+
+            View card = LayoutInflater.from(this).inflate(R.layout.item_category_progress, llHistoryContainer, false);
+            TextView tvCatName = card.findViewById(R.id.tvCategoryName);
+            TextView tvCatScore = card.findViewById(R.id.tvCategoryScore);
+            com.google.android.material.progressindicator.LinearProgressIndicator progress = card.findViewById(R.id.progressIndicator);
+
+            tvCatName.setText(category);
+            tvCatScore.setText(score + "%");
+            progress.setProgress(score);
+            
+            llHistoryContainer.addView(card, i + 1);
+        }
     }
 
     private void loadFirestoreProgress() {
@@ -181,21 +302,37 @@ public class ProgressActivity extends AppCompatActivity {
         db.collection("progress")
                 .whereEqualTo("uid", uid)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(50)
+                .limit(20)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
+                    boolean first = true;
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        HashMap<String, String> map = new HashMap<>();
-                        map.put("word", doc.getString("word"));
-                        map.put("score", "Score: " + doc.get("score") + " (Cloud)");
-                        map.put("category", "Category: " + doc.getString("category"));
-                        displayData.add(0, map); // Add to top
+                        if (first) {
+                            long ts = doc.getLong("timestamp") != null ? doc.getLong("timestamp") : 0;
+                            if (ts > 0) {
+                                SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
+                                tvLastPractice.setText("Last Session: " + sdf.format(new Date(ts)));
+                            }
+                            first = false;
+                        }
+                        addHistoryItem(doc.getString("word"), String.valueOf(doc.get("score")), doc.getString("category"), "Cloud");
                     }
-                    adapter.notifyDataSetChanged();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error loading cloud progress", e);
-                    Toast.makeText(this, "Couldn't load cloud progress", Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void addHistoryItem(String word, String score, String category, String source) {
+        View view = LayoutInflater.from(this).inflate(R.layout.progress_item, llHistoryContainer, false);
+        TextView tvWord = view.findViewById(R.id.tvProgressWord);
+        TextView tvScore = view.findViewById(R.id.tvProgressScore);
+        TextView tvCat = view.findViewById(R.id.tvProgressCategory);
+        
+        tvWord.setText(word);
+        tvScore.setText("Score: " + score + "% (" + source + ")");
+        tvCat.setText("Category: " + category);
+        
+        llHistoryContainer.addView(view);
     }
 }

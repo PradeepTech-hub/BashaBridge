@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -42,6 +43,7 @@ public class ManageContentActivity extends AppCompatActivity {
     private FloatingActionButton fabAdd;
     private ContentAdapter adapter;
     private List<Word> contentList;
+    private List<Word> filteredList;
     private FirebaseFirestore db;
     private String contentType; // "Words" or "Sentences"
 
@@ -67,6 +69,39 @@ public class ManageContentActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // --- Role-based Access Control ---
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) {
+            finish();
+            return;
+        }
+
+        User user = new DBHelper(this).getUser(uid);
+        if (user != null && "teacher".equalsIgnoreCase(user.getRole())) {
+            setupActivity();
+        } else {
+            // Fallback to Firestore
+            FirebaseFirestore.getInstance().collection("users").document(uid).get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        User remoteUser = documentSnapshot.toObject(User.class);
+                        if (remoteUser != null && "teacher".equalsIgnoreCase(remoteUser.getRole())) {
+                            remoteUser.setUid(uid);
+                            new DBHelper(this).saveUser(remoteUser);
+                            setupActivity();
+                        } else {
+                            Toast.makeText(this, "Access Denied: Teacher role required", Toast.LENGTH_SHORT).show();
+                            finish();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Access Denied: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        finish();
+                    });
+        }
+    }
+
+    private void setupActivity() {
         setContentView(R.layout.activity_manage_content);
 
         db = FirebaseFirestore.getInstance();
@@ -81,9 +116,12 @@ public class ManageContentActivity extends AppCompatActivity {
         fabAdd = findViewById(R.id.fabAdd);
 
         contentList = new ArrayList<>();
-        adapter = new ContentAdapter(contentList, this::showEditDialog, this::deleteContent);
+        filteredList = new ArrayList<>();
+        adapter = new ContentAdapter(filteredList, this::showEditDialog, this::deleteContent);
         rvContent.setLayoutManager(new LinearLayoutManager(this));
         rvContent.setAdapter(adapter);
+
+        setupFilters();
 
         fabAdd.setOnClickListener(v -> showEditDialog(null));
 
@@ -131,10 +169,48 @@ public class ManageContentActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 contentList.clear();
                 contentList.addAll(mergedMap.values());
-                adapter.notifyDataSetChanged();
+                applyFilters();
                 Log.d("ManageContent", "Displaying " + contentList.size() + " items");
             });
         });
+    }
+
+    private void setupFilters() {
+        EditText etSearch = findViewById(R.id.etSearch);
+        etSearch.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { applyFilters(); }
+            @Override public void afterTextChanged(android.text.Editable s) {}
+        });
+
+        com.google.android.material.chip.ChipGroup chipGroup = findViewById(R.id.chipGroupFilters);
+        chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> applyFilters());
+    }
+
+    private void applyFilters() {
+        String query = ((EditText) findViewById(R.id.etSearch)).getText().toString().toLowerCase().trim();
+        int checkedChipId = ((com.google.android.material.chip.ChipGroup) findViewById(R.id.chipGroupFilters)).getCheckedChipId();
+
+        filteredList.clear();
+        for (Word word : contentList) {
+            boolean matchesSearch = word.getEnglish().toLowerCase().contains(query) ||
+                    word.getKannada().toLowerCase().contains(query) ||
+                    (word.getHindi() != null && word.getHindi().toLowerCase().contains(query));
+
+            boolean matchesStd = true;
+            if (checkedChipId == R.id.chipStd1) matchesStd = (word.getStandard() == 1);
+            else if (checkedChipId == R.id.chipStd2) matchesStd = (word.getStandard() == 2);
+
+            if (matchesSearch && matchesStd) {
+                filteredList.add(word);
+            }
+        }
+
+        if (checkedChipId == R.id.chipSortAZ) {
+            filteredList.sort((w1, w2) -> w1.getEnglish().compareToIgnoreCase(w2.getEnglish()));
+        }
+
+        adapter.notifyDataSetChanged();
     }
 
     private void showEditDialog(Word word) {

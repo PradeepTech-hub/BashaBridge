@@ -21,4 +21,21 @@
     <string name="word_image">Word Image</string>
     <string name="select_image">Select Image</string>
     <string name="content_image">Content Image</string>
+    <string name="total_words">Words</string>
+    <string name="total_sentences">Sentences</string>
+    <string name="accuracy">Accuracy</string>
+    <string name="total_xp">Total XP</string>
+    <string name="performance_insights">Performance Insights</string>
+    <string name="favorite">Favorite: %1$s</string>
+    <string name="needs_work">Needs Work: %1$s</string>
+    <string name="best_score">Best Score: %1$d%%</string>
+    <string name="last_session">Last Session: %1$s</string>
+    <string name="reset_local_progress">Reset Local Progress</string>
+    <string name="practice_history">Practice History</string>
+    <string name="xp_earned">+%1$d XP</string>
+    <string name="accuracy_format">%1$d%%</string>
+    <string name="mastery_format">%1$d/%2$d</string>
+    <string name="hardest_category_format">Hardest Category: %1$s</string>
+    <string name="xp_streak_format">XP: %1$d | Streak: %2$d</string>
+    <string name="class_format">Class: %1$s</string>
 </resources>

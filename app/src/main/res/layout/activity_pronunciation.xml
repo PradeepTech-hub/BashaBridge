@@ -96,13 +96,22 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:layout_marginBottom="32dp">
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSlowListen"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="🐢 Slow"
+                app:icon="@android:drawable/ic_lock_silent_mode_off"/>
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/btnListen"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="32dp"
+                android:layout_marginEnd="16dp"
                 android:src="@android:drawable/ic_lock_silent_mode_off"
                 app:backgroundTint="?attr/colorSecondaryContainer"
                 app:tint="?attr/colorOnSecondaryContainer"
@@ -117,6 +126,15 @@
                 app:backgroundTint="?attr/colorPrimary"
                 app:tint="?attr/colorOnPrimary"
                 android:contentDescription="Record" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRetry"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="🔄 Retry"
+                android:visibility="invisible"/>
         </LinearLayout>
 
         <TextView

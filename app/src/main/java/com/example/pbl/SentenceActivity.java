@@ -32,13 +32,18 @@ public class SentenceActivity extends AppCompatActivity {
     private int currentIndex = 0;
     private boolean isHindiMode;
     private int selectedStandard;
+    private int totalXP = 0;
+    private int masteredCount = 0;
+    private List<Integer> scores = new ArrayList<>();
 
     private TextView tvTargetSentence, tvTranslation, tvUserSpeech, tvFeedback;
     private ImageView ivSentenceImage;
+    private com.google.android.material.button.MaterialButton btnSlowListen, btnRetry;
     private TTSHelper ttsHelper;
     private DBHelper dbHelper;
     private FirebaseFirestore db;
     private ListenerRegistration registration;
+    private float ttsSpeed = 1.0f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,9 +62,12 @@ public class SentenceActivity extends AppCompatActivity {
         tvUserSpeech = findViewById(R.id.tvUserSpeech);
         tvFeedback = findViewById(R.id.tvFeedback);
         ivSentenceImage = findViewById(R.id.ivSentenceImage);
-        MaterialButton btnListen = findViewById(R.id.btnListen);
-        MaterialButton btnRecord = findViewById(R.id.btnRecord);
-        MaterialButton btnNextSentence = findViewById(R.id.btnNextSentence);
+        
+        btnSlowListen = findViewById(R.id.btnSlowListen);
+        btnRetry = findViewById(R.id.btnRetry);
+        com.google.android.material.button.MaterialButton btnListen = findViewById(R.id.btnListen);
+        com.google.android.material.button.MaterialButton btnRecord = findViewById(R.id.btnRecord);
+        com.google.android.material.button.MaterialButton btnNextSentence = findViewById(R.id.btnNextSentence);
 
         ttsHelper = new TTSHelper(this);
         if (isHindiMode) {
@@ -74,10 +82,20 @@ public class SentenceActivity extends AppCompatActivity {
         loadFirestoreSentences();
 
         btnListen.setOnClickListener(v -> {
-            if (!sentenceList.isEmpty()) {
-                String text = isHindiMode ? sentenceList.get(currentIndex).getHindi() : sentenceList.get(currentIndex).getEnglish();
-                ttsHelper.speak(text);
-            }
+            ttsSpeed = 1.0f;
+            speakCurrentSentence();
+        });
+
+        btnSlowListen.setOnClickListener(v -> {
+            ttsSpeed = 0.5f;
+            speakCurrentSentence();
+        });
+
+        btnRetry.setOnClickListener(v -> {
+            tvUserSpeech.setText("You said: ...");
+            tvFeedback.setText("Feedback");
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_neutral));
+            btnRetry.setVisibility(android.view.View.INVISIBLE);
         });
 
         btnRecord.setOnClickListener(v -> SpeechHelper.startListening(this, isHindiMode));
@@ -87,19 +105,71 @@ public class SentenceActivity extends AppCompatActivity {
                 currentIndex++;
                 updateUI();
             } else {
-                Toast.makeText(this, "All sentences completed!", Toast.LENGTH_SHORT).show();
+                showSummary();
             }
         });
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SpeechHelper.SPEECH_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
+            ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (result != null && !result.isEmpty()) {
+                String spokenText = result.get(0);
+                tvUserSpeech.setText("You said: " + spokenText);
+                evaluatePronunciation(spokenText);
+            }
+        }
+    }
+
+    private void showSummary() {
+        int avgScore = 0;
+        if (!scores.isEmpty()) {
+            int sum = 0;
+            for (int s : scores) sum += s;
+            avgScore = sum / scores.size();
+        }
+
+        Intent intent = new Intent(this, LessonCompletionActivity.class);
+        intent.putExtra("TOTAL_XP", totalXP);
+        intent.putExtra("ACCURACY", avgScore);
+        intent.putExtra("MASTERED_COUNT", masteredCount);
+        intent.putExtra("TOTAL_COUNT", sentenceList.size());
+        startActivity(intent);
+        finish();
+    }
+
+    private void speakCurrentSentence() {
+        if (!sentenceList.isEmpty()) {
+            String text = isHindiMode ? sentenceList.get(currentIndex).getHindi() : sentenceList.get(currentIndex).getEnglish();
+            ttsHelper.setSpeechRate(ttsSpeed);
+            ttsHelper.speak(text);
+        }
+    }
+
     private void loadFirestoreSentences() {
+        // --- Try Offline Content First ---
+        List<Word> offlineSentences = dbHelper.getOfflineContent(selectedStandard, "Sentences", "Sentence");
+        if (!offlineSentences.isEmpty()) {
+            sentenceList.clear();
+            sentenceList.addAll(offlineSentences);
+            updateUI();
+        }
+
+        if (!SyncManager.getInstance(this).isOnline()) {
+            if (sentenceList.isEmpty()) {
+                sentenceList.addAll(DataManager.getWordsForCategory(selectedStandard, "Sentences"));
+                updateUI();
+            }
+            return;
+        }
+
         registration = db.collection("sentences")
                 .whereEqualTo("standard", selectedStandard)
                 .addSnapshotListener((value, error) -> {
-                    // Use LinkedHashMap to preserve order and merge by key
                     java.util.Map<String, Word> mergedMap = new java.util.LinkedHashMap<>();
 
-                    // 1. Add default data first
                     List<Word> defaults = DataManager.getWordsForCategory(selectedStandard, "Sentences");
                     for (Word w : defaults) {
                         String key = (w.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
@@ -115,13 +185,15 @@ public class SentenceActivity extends AppCompatActivity {
                     }
 
                     if (value != null) {
-                        // 2. Add/Overwrite with Firestore data
                         for (QueryDocumentSnapshot document : value) {
                             try {
                                 Word word = document.toObject(Word.class);
                                 word.setId(document.getId());
                                 String key = (word.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
                                 mergedMap.put(key, word);
+                                
+                                // Cache for offline
+                                dbHelper.saveContent(word, "Sentence");
                             } catch (Exception e) {
                                 Log.e(TAG, "Error parsing Firestore document", e);
                             }
@@ -136,72 +208,125 @@ public class SentenceActivity extends AppCompatActivity {
 
     private void updateUI() {
         if (sentenceList.isEmpty()) {
-            Toast.makeText(this, "No sentences found", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "No sentences available", Toast.LENGTH_SHORT).show();
             return;
         }
         Word current = sentenceList.get(currentIndex);
         
         if (isHindiMode) {
             tvTargetSentence.setText(current.getHindi());
-            tvTranslation.setText(current.getKannada());
-            tvTranslation.setVisibility(android.view.View.VISIBLE);
         } else {
             tvTargetSentence.setText(current.getEnglish());
-            tvTranslation.setVisibility(android.view.View.GONE);
         }
-
+        tvTranslation.setText(current.getKannada());
+        
         if (current.getImageUrl() != null && !current.getImageUrl().isEmpty()) {
-            ivSentenceImage.setVisibility(android.view.View.VISIBLE);
             Glide.with(this)
                     .load(current.getImageUrl())
                     .placeholder(android.R.drawable.ic_menu_gallery)
-                    .error(android.R.drawable.ic_menu_report_image)
                     .into(ivSentenceImage);
         } else {
-            ivSentenceImage.setVisibility(android.view.View.GONE);
+            ivSentenceImage.setImageResource(current.getImageResId() != 0 ? current.getImageResId() : android.R.drawable.ic_menu_gallery);
         }
-
+        
         tvUserSpeech.setText("You said: ...");
         tvFeedback.setText("Feedback");
         tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_neutral));
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == SpeechHelper.SPEECH_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
-            ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-            if (result != null && !result.isEmpty()) {
-                String spokenText = result.get(0);
-                tvUserSpeech.setText("You said: " + spokenText);
-                evaluatePronunciation(spokenText);
-            }
-        }
+        btnRetry.setVisibility(android.view.View.INVISIBLE);
     }
 
     private void evaluatePronunciation(String spokenText) {
         Word current = sentenceList.get(currentIndex);
         String target = (isHindiMode ? current.getHindi() : current.getEnglish()).toLowerCase().trim();
-        String spoken = spokenText.toLowerCase().trim();
+        String spoken = NumberUtils.normalizeNumbers(spokenText.toLowerCase().trim());
+        target = NumberUtils.normalizeNumbers(target);
 
-        int score = 0;
-        if (spoken.equals(target)) {
-            tvFeedback.setText("Perfect! 🌟");
-            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_perfect));
-            score = 100;
-        } else if (spoken.contains(target) || target.contains(spoken)) {
-            tvFeedback.setText("Very Good! 👍");
-            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_good));
-            score = 80;
-        } else {
-            tvFeedback.setText("Try Again 🔄");
-            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.error));
-            score = 40;
-        }
+        int score = calculateFuzzyScore(target, spoken);
+        scores.add(score);
+        if (score >= 80) masteredCount++;
 
+        updateFeedbackUI(score);
+
+        String uid = FirebaseAuth.getInstance().getUid();
         dbHelper.insertProgress(target, score, "Sentences");
-        saveProgressToFirestore(target, score);
+
+        if (SyncManager.getInstance(this).isOnline()) {
+            saveProgressToFirestore(target, score);
+            if (score >= 60) {
+                int xp = score / 5;
+                totalXP += xp;
+                updateUserXP(xp);
+            }
+        } else if (uid != null) {
+            dbHelper.addToSyncQueue(uid, target, score, "Sentences");
+            User localUser = dbHelper.getUser(uid);
+            if (localUser != null && score >= 60) {
+                int xp = score / 5;
+                totalXP += xp;
+                localUser.setXp(localUser.getXp() + xp);
+                dbHelper.saveUser(localUser);
+            }
+        }
+    }
+
+    private void updateFeedbackUI(int score) {
+        if (score >= 95) {
+            tvFeedback.setText("Excellent! 🌟 (" + score + "%)");
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_perfect));
+            btnRetry.setVisibility(android.view.View.INVISIBLE);
+        } else if (score >= 80) {
+            tvFeedback.setText("Great Job! 👍 (" + score + "%)");
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_perfect));
+            btnRetry.setVisibility(android.view.View.VISIBLE);
+        } else if (score >= 60) {
+            tvFeedback.setText("Good Try! 🙂 (" + score + "%)");
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.feedback_good));
+            btnRetry.setVisibility(android.view.View.VISIBLE);
+        } else {
+            tvFeedback.setText("Keep Practicing! 🔄 (" + score + "%)");
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.error));
+            btnRetry.setVisibility(android.view.View.VISIBLE);
+        }
+    }
+
+    private int calculateFuzzyScore(String target, String input) {
+        if (target.isEmpty() || input.isEmpty()) return 0;
+        if (target.equals(input)) return 100;
+
+        int distance = LevenshteinDistance(target, input);
+        int maxLength = Math.max(target.length(), input.length());
+
+        float score = (1.0f - (float) distance / maxLength) * 100;
+        return Math.max(0, Math.round(score));
+    }
+
+    private int LevenshteinDistance(String s1, String s2) {
+        int[][] dp = new int[s1.length() + 1][s2.length() + 1];
+
+        for (int i = 0; i <= s1.length(); i++) {
+            for (int j = 0; j <= s2.length(); j++) {
+                if (i == 0) {
+                    dp[i][j] = j;
+                } else if (j == 0) {
+                    dp[i][j] = i;
+                } else {
+                    dp[i][j] = Math.min(Math.min(
+                                    dp[i - 1][j] + 1,
+                                    dp[i][j - 1] + 1),
+                            dp[i - 1][j - 1] + (s1.charAt(i - 1) == s2.charAt(j - 1) ? 0 : 1)
+                    );
+                }
+            }
+        }
+        return dp[s1.length()][s2.length()];
+    }
+
+    private void updateUserXP(int xpToAdd) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
+
+        db.collection("users").document(uid)
+                .update("xp", com.google.firebase.firestore.FieldValue.increment(xpToAdd));
     }
 
     private void saveProgressToFirestore(String text, int score) {

@@ -21,6 +21,7 @@ import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -53,6 +54,7 @@ public class LoginActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
@@ -104,6 +106,26 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         btnLogin.setEnabled(false);
+
+        // --- Offline Login Support ---
+        if (!SyncManager.getInstance(this).isOnline()) {
+            DBHelper dbHelper = new DBHelper(this);
+            User localUser = dbHelper.getUserByEmail(email); // Need to implement this in DBHelper
+            if (localUser != null) {
+                if (selectedRole.equals(localUser.getRole())) {
+                    Toast.makeText(this, "Offline Login Successful", Toast.LENGTH_SHORT).show();
+                    proceedToDashboard(localUser);
+                    return;
+                } else {
+                    Toast.makeText(this, "Role mismatch in offline mode", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(this, "Internet required for first login", Toast.LENGTH_SHORT).show();
+            }
+            btnLogin.setEnabled(true);
+            return;
+        }
+
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
@@ -116,10 +138,24 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
+    private void proceedToDashboard(User user) {
+        if (user.getRole() != null && user.getRole().equalsIgnoreCase("teacher")) {
+            startActivity(new Intent(LoginActivity.this, TeacherDashboardActivity.class));
+        } else {
+            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+            intent.putExtra("USER_STANDARD", user.getStandard());
+            startActivity(intent);
+        }
+        finish();
+    }
+
     private void signInWithGoogle() {
         int checkedId = toggleGroupRole.getCheckedButtonId();
-        final String selectedRole = (checkedId == R.id.btnTeacher) ? "teacher" : "student";
-        
+        if (checkedId == View.NO_ID) {
+            Toast.makeText(this, "Please select a role first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
             googleSignInLauncher.launch(signInIntent);
@@ -152,9 +188,21 @@ public class LoginActivity extends AppCompatActivity {
                         checkUserRoleAndNavigate(uid, selectedRole);
                     } else {
                         // User exists in Auth but not in Firestore - redirected to complete registration
-                        Toast.makeText(this, "Please register to complete your profile", Toast.LENGTH_LONG).show();
-                        mAuth.signOut();
-                        btnGoogleLogin.setEnabled(true);
+                        // Or auto-register Google users
+                        FirebaseUser firebaseUser = mAuth.getCurrentUser();
+                        if (firebaseUser != null) {
+                            User newUser = new User(uid, firebaseUser.getDisplayName(), firebaseUser.getEmail(), selectedRole, "N/A", System.currentTimeMillis());
+                            db.collection("users").document(uid).set(newUser)
+                                    .addOnSuccessListener(aVoid -> {
+                                        new DBHelper(this).saveUser(newUser);
+                                        proceedToDashboard(newUser);
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Toast.makeText(this, "Failed to create profile: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                        mAuth.signOut();
+                                        btnGoogleLogin.setEnabled(true);
+                                    });
+                        }
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -169,22 +217,19 @@ public class LoginActivity extends AppCompatActivity {
                     if (documentSnapshot.exists()) {
                         User user = documentSnapshot.toObject(User.class);
                         if (user != null) {
-                            if (selectedRole != null && !selectedRole.equals(user.getRole())) {
+                            user.setUid(uid);
+                            new DBHelper(LoginActivity.this).saveUser(user); // Cache for offline
+
+                            if (selectedRole != null && !selectedRole.equalsIgnoreCase(user.getRole())) {
                                 mAuth.signOut();
                                 btnLogin.setEnabled(true);
-                                Toast.makeText(LoginActivity.this, "Access denied. You are not registered as a " + selectedRole, Toast.LENGTH_LONG).show();
+                                btnGoogleLogin.setEnabled(true);
+                                String actualRole = (user.getRole() != null) ? user.getRole() : "none";
+                                Toast.makeText(LoginActivity.this, "Access denied. You are registered as a " + actualRole + ", but selected " + selectedRole, Toast.LENGTH_LONG).show();
                                 return;
                             }
 
-                            if ("teacher".equals(user.getRole())) {
-                                startActivity(new Intent(LoginActivity.this, TeacherDashboardActivity.class));
-                            } else {
-                                // For students, we might need to ensure they have a standard selected
-                                Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                                intent.putExtra("USER_STANDARD", user.getStandard());
-                                startActivity(intent);
-                            }
-                            finish();
+                            proceedToDashboard(user);
                         }
                     } else {
                         btnLogin.setEnabled(true);
@@ -192,8 +237,14 @@ public class LoginActivity extends AppCompatActivity {
                     }
                 })
                 .addOnFailureListener(e -> {
-                    btnLogin.setEnabled(true);
-                    Toast.makeText(LoginActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    // Try offline even if navigation fails (e.g. network lost during fetch)
+                    User localUser = new DBHelper(LoginActivity.this).getUser(uid);
+                    if (localUser != null) {
+                        proceedToDashboard(localUser);
+                    } else {
+                        btnLogin.setEnabled(true);
+                        Toast.makeText(LoginActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
                 });
     }
 

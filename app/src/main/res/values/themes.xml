@@ -23,4 +23,10 @@
     </style>
 
     <style name="Theme.Pbl" parent="Base.Theme.Pbl" />
+
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/primary</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Pbl</item>
+    </style>
 </resources>
