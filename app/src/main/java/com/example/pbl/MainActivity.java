@@ -52,11 +52,17 @@ public class MainActivity extends AppCompatActivity {
         SyncManager.getInstance(this).downloadContent();
 
         if (mAuth.getCurrentUser() == null) {
-            // Check if we have a cached user for offline
-            // Usually, FirebaseAuth persists sessions, but this is an extra layer
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
+        }
+
+        // Try to get standard from Intent first for faster load
+        String intentStd = getIntent().getStringExtra("USER_STANDARD");
+        if (intentStd != null && !intentStd.equals("N/A")) {
+            try {
+                userStandard = Integer.parseInt(intentStd);
+            } catch (NumberFormatException ignored) {}
         }
 
         initViews();
@@ -141,7 +147,12 @@ public class MainActivity extends AppCompatActivity {
                     if (documentSnapshot != null && documentSnapshot.exists()) {
                         User user = documentSnapshot.toObject(User.class);
                         if (user != null) {
-                            userStandard = Integer.parseInt(user.getStandard() != null ? user.getStandard() : "1");
+                            String standardStr = user.getStandard();
+                            try {
+                                userStandard = Integer.parseInt(standardStr != null && !standardStr.trim().isEmpty() && !standardStr.equals("N/A") ? standardStr : "1");
+                            } catch (NumberFormatException e) {
+                                userStandard = 1; // Fallback
+                            }
                             updateDashboardUI(user);
                             checkAndUpdateStreak(user);
                         }
@@ -247,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
             tvLangLabel.setText("ತರಬೇತಿ ಭಾಷೆ");
             tvCatLabel.setText("ವರ್ಗಗಳು");
             if (findViewById(R.id.toolbar) != null) {
-                ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("ಭಾಷಾಬ್ರಿಡ್ಜ್");
+                ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("Basha Setu");
             }
         } else {
             tvWelcome.setText("Welcome back!");
@@ -256,7 +267,7 @@ public class MainActivity extends AppCompatActivity {
             tvLangLabel.setText("Practice Language");
             tvCatLabel.setText("Categories");
             if (findViewById(R.id.toolbar) != null) {
-                ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("BhashaBridge");
+                ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("Basha Setu");
             }
         }
     }

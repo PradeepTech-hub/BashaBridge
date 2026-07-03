@@ -12,6 +12,13 @@ public class StandardSelectionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_standard_selection);
 
+        // Apply logo animation
+        android.view.View logoContainer = findViewById(R.id.logoContainer);
+        if (logoContainer != null) {
+            android.view.animation.Animation fadeIn = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.logo_fade_in);
+            logoContainer.startAnimation(fadeIn);
+        }
+
         findViewById(R.id.cardStandard1).setOnClickListener(v -> saveAndContinue(1));
         findViewById(R.id.cardStandard2).setOnClickListener(v -> saveAndContinue(2));
     }

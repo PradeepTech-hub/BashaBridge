@@ -57,6 +57,13 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
+        // Apply logo animation
+        android.view.View logoContainer = findViewById(R.id.logoContainer);
+        if (logoContainer != null) {
+            android.view.animation.Animation fadeIn = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.logo_fade_in);
+            logoContainer.startAnimation(fadeIn);
+        }
+
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
@@ -171,7 +178,8 @@ public class RegisterActivity extends AppCompatActivity {
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         String uid = mAuth.getCurrentUser().getUid();
-                        User user = new User(uid, name, email, role, standard, System.currentTimeMillis());
+                        String finalStandard = (role.equals("teacher") || TextUtils.isEmpty(standard)) ? "1" : standard;
+                        User user = new User(uid, name, email, role, finalStandard, System.currentTimeMillis());
                         
                         db.collection("users").document(uid).set(user)
                                 .addOnSuccessListener(aVoid -> {

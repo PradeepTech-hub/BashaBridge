@@ -68,6 +68,7 @@ public class SentenceActivity extends AppCompatActivity {
         com.google.android.material.button.MaterialButton btnListen = findViewById(R.id.btnListen);
         com.google.android.material.button.MaterialButton btnRecord = findViewById(R.id.btnRecord);
         com.google.android.material.button.MaterialButton btnNextSentence = findViewById(R.id.btnNextSentence);
+        com.google.android.material.button.MaterialButton btnPrevSentence = findViewById(R.id.btnPrevSentence);
 
         ttsHelper = new TTSHelper(this);
         if (isHindiMode) {
@@ -100,14 +101,25 @@ public class SentenceActivity extends AppCompatActivity {
 
         btnRecord.setOnClickListener(v -> SpeechHelper.startListening(this, isHindiMode));
 
-        btnNextSentence.setOnClickListener(v -> {
-            if (currentIndex < sentenceList.size() - 1) {
-                currentIndex++;
-                updateUI();
-            } else {
-                showSummary();
-            }
-        });
+        btnNextSentence.setOnClickListener(v -> nextSentence());
+
+        btnPrevSentence.setOnClickListener(v -> prevSentence());
+    }
+
+    private void nextSentence() {
+        if (currentIndex < sentenceList.size() - 1) {
+            currentIndex++;
+            updateUI();
+        } else {
+            showSummary();
+        }
+    }
+
+    private void prevSentence() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateUI();
+        }
     }
 
     @Override

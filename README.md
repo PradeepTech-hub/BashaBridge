@@ -1,5 +1,5 @@
-BhashaBridge 🗣️📚
-BhashaBridge is an Android application designed to help government school students improve their English language skills using Kannada as a bridge language.
+Basha Setu 🗣️📚
+Basha Setu is an Android application designed to help government school students improve their English language skills using Kannada as a bridge language.
 
 The app focuses on basic vocabulary, pronunciation, and sentence formation, aligned with the Karnataka Government School syllabus (1st & 2nd Standard).
 

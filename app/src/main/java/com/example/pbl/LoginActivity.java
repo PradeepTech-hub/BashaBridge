@@ -58,6 +58,13 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
+        // Apply logo animation
+        android.view.View logoContainer = findViewById(R.id.logoContainer);
+        if (logoContainer != null) {
+            android.view.animation.Animation fadeIn = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.logo_fade_in);
+            logoContainer.startAnimation(fadeIn);
+        }
+
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
