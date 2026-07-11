@@ -161,61 +161,58 @@ public class SentenceActivity extends AppCompatActivity {
     }
 
     private void loadFirestoreSentences() {
-        // --- Try Offline Content First ---
-        List<Word> offlineSentences = dbHelper.getOfflineContent(selectedStandard, "Sentences", "Sentence");
-        if (!offlineSentences.isEmpty()) {
-            sentenceList.clear();
-            sentenceList.addAll(offlineSentences);
-            updateUI();
-        }
+        // Initial load from local cache
+        mergeAndDisplay(dbHelper.getOfflineContent(selectedStandard, "Sentences", "Sentence"));
 
         if (!SyncManager.getInstance(this).isOnline()) {
-            if (sentenceList.isEmpty()) {
-                sentenceList.addAll(DataManager.getWordsForCategory(selectedStandard, "Sentences"));
-                updateUI();
-            }
             return;
         }
 
         registration = db.collection("sentences")
                 .whereEqualTo("standard", selectedStandard)
                 .addSnapshotListener((value, error) -> {
-                    java.util.Map<String, Word> mergedMap = new java.util.LinkedHashMap<>();
-
-                    List<Word> defaults = DataManager.getWordsForCategory(selectedStandard, "Sentences");
-                    for (Word w : defaults) {
-                        String key = (w.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
-                        mergedMap.put(key, w);
-                    }
-
                     if (error != null) {
                         Log.e(TAG, "Listen failed.", error);
-                        sentenceList.clear();
-                        sentenceList.addAll(mergedMap.values());
-                        updateUI();
                         return;
                     }
 
                     if (value != null) {
+                        List<Word> firestoreSentences = new ArrayList<>();
                         for (QueryDocumentSnapshot document : value) {
                             try {
                                 Word word = document.toObject(Word.class);
                                 word.setId(document.getId());
-                                String key = (word.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
-                                mergedMap.put(key, word);
-                                
+                                firestoreSentences.add(word);
                                 // Cache for offline
                                 dbHelper.saveContent(word, "Sentence");
                             } catch (Exception e) {
                                 Log.e(TAG, "Error parsing Firestore document", e);
                             }
                         }
+                        mergeAndDisplay(firestoreSentences);
                     }
-
-                    sentenceList.clear();
-                    sentenceList.addAll(mergedMap.values());
-                    updateUI();
                 });
+    }
+
+    private void mergeAndDisplay(List<Word> firestoreSentences) {
+        java.util.Map<String, Word> mergedMap = new java.util.LinkedHashMap<>();
+
+        // 1. Add default data first
+        List<Word> defaults = DataManager.getWordsForCategory(selectedStandard, "Sentences");
+        for (Word w : defaults) {
+            String key = (w.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
+            mergedMap.put(key, w);
+        }
+
+        // 2. Add/Overwrite with Firestore data
+        for (Word w : firestoreSentences) {
+            String key = (w.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
+            mergedMap.put(key, w);
+        }
+
+        sentenceList.clear();
+        sentenceList.addAll(mergedMap.values());
+        updateUI();
     }
 
     private void updateUI() {

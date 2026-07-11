@@ -1,6 +1,6 @@
-# 🗣️📚 Basha Setu
+# 🗣️📚 Bhasha Setu
 
-**Basha Setu** is an Android application developed to help **government school students** improve their **English language skills** using **Kannada** as a bridge language.
+**Bhasha Setu** is an Android application developed to help **government school students** improve their **English language skills** using **Kannada** as a bridge language.
 
 The application focuses on **basic vocabulary, pronunciation, listening, speaking, and sentence formation**, aligned with the **Karnataka Government School 1st & 2nd Standard syllabus**.
 
@@ -8,7 +8,7 @@ The application focuses on **basic vocabulary, pronunciation, listening, speakin
 
 ## 🎯 Objective
 
-Basha Setu aims to help young learners:
+Bhasha Setu aims to help young learners:
 
 * 📖 Understand English through Kannada
 * 🗣️ Improve pronunciation and speaking skills

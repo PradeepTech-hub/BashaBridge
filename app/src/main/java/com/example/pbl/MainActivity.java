@@ -12,6 +12,7 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -104,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
         setupCategoryCard(R.id.cardAnimals, "Animals", toggleGroupLanguage);
         setupCategoryCard(R.id.cardFruits, "Fruits", toggleGroupLanguage);
         setupCategoryCard(R.id.cardDaily, "Daily Use", toggleGroupLanguage);
-        setupCategoryCard(R.id.cardSchool, "School Objects", toggleGroupLanguage);
+        setupCategoryCard(R.id.cardSchool, "School", toggleGroupLanguage);
         setupCategoryCard(R.id.cardNumbers, "Numbers", toggleGroupLanguage);
         setupCategoryCard(R.id.cardSentences, "Sentences", toggleGroupLanguage);
 
@@ -155,6 +156,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                             updateDashboardUI(user);
                             checkAndUpdateStreak(user);
+                            updateCategoryProgress(); // Refresh progress when standard is loaded
                         }
                     }
                 });
@@ -201,22 +203,54 @@ public class MainActivity extends AppCompatActivity {
         progressAnimals.setProgress(calculateProgress("Animals"));
         progressFruits.setProgress(calculateProgress("Fruits"));
         progressDaily.setProgress(calculateProgress("Daily Use"));
-        progressSchool.setProgress(calculateProgress("School Objects"));
+        progressSchool.setProgress(calculateProgress("School"));
         progressNumbers.setProgress(calculateProgress("Numbers"));
         progressSentences.setProgress(calculateProgress("Sentences"));
     }
 
     private int calculateProgress(String category) {
-        // This is a simplified progress calculation. 
-        // In a real app, it would be (learned_words / total_words_in_category) * 100
+        // Fetch total items (DataManager + Offline Firestore Cache)
+        java.util.Map<String, Word> mergedMap = new java.util.LinkedHashMap<>();
+
+        // 1. Add default data first
+        List<Word> defaults = DataManager.getWordsForCategory(userStandard, category);
+        for (Word w : defaults) {
+            String key = (w.getEnglish().trim() + "_" + userStandard).toLowerCase();
+            mergedMap.put(key, w);
+        }
+
+        // 2. Add offline cache from Firestore
+        List<Word> offlineWords = dbHelper.getOfflineContent(userStandard, category, category.equals("Sentences") ? "Sentence" : "Word");
+        for (Word w : offlineWords) {
+            String key = (w.getEnglish().trim() + "_" + userStandard).toLowerCase();
+            mergedMap.put(key, w);
+        }
+
+        int totalItems = mergedMap.size();
+        if (totalItems == 0) return 0;
+
         ArrayList<HashMap<String, String>> progressList = dbHelper.getAllProgress();
-        int count = 0;
+        int learnedCount = 0;
+        // Count unique words from progress that match the category
+        java.util.Set<String> uniqueWords = new java.util.HashSet<>();
         for (HashMap<String, String> p : progressList) {
             if (category.equals(p.get("category"))) {
-                count++;
+                uniqueWords.add(p.get("word").toLowerCase().trim());
             }
         }
-        return Math.min(count * 10, 100); // 10% per word for demo
+        
+        // Only count progress if the word actually exists in the current merged set
+        for (String learnedWord : uniqueWords) {
+            // Check if any word in our merged map has this English text
+            for (Word w : mergedMap.values()) {
+                if (w.getEnglish().equalsIgnoreCase(learnedWord)) {
+                    learnedCount++;
+                    break;
+                }
+            }
+        }
+        
+        return Math.min((learnedCount * 100) / totalItems, 100);
     }
 
     private void resumeLastCategory() {
@@ -258,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
             tvLangLabel.setText("ತರಬೇತಿ ಭಾಷೆ");
             tvCatLabel.setText("ವರ್ಗಗಳು");
             if (findViewById(R.id.toolbar) != null) {
-                ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("Basha Setu");
+                ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("Bhasha Setu");
             }
         } else {
             tvWelcome.setText("Welcome back!");
@@ -267,7 +301,7 @@ public class MainActivity extends AppCompatActivity {
             tvLangLabel.setText("Practice Language");
             tvCatLabel.setText("Categories");
             if (findViewById(R.id.toolbar) != null) {
-                ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("Basha Setu");
+                ((com.google.android.material.appbar.MaterialToolbar)findViewById(R.id.toolbar)).setTitle("Bhasha Setu");
             }
         }
     }

@@ -9,6 +9,8 @@ public class Word {
     private String imageUrl; // New field for custom photos
     private String category;
     private int standard;
+    private String createdBy;
+    private long createdAt;
 
     public Word() {
         // Required for Firestore
@@ -51,4 +53,10 @@ public class Word {
 
     public int getStandard() { return standard; }
     public void setStandard(int standard) { this.standard = standard; }
+
+    public String getCreatedBy() { return createdBy; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+
+    public long getCreatedAt() { return createdAt; }
+    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
 }

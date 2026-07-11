@@ -24,7 +24,7 @@ public class StandardSelectionActivity extends AppCompatActivity {
     }
 
     private void saveAndContinue(int standard) {
-        SharedPreferences prefs = getSharedPreferences("BashaBridgePrefs", MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences("BhashaSetuPrefs", MODE_PRIVATE);
         prefs.edit().putInt("SELECTED_STANDARD", standard).apply();
 
         Intent intent = new Intent(this, MainActivity.class);

@@ -71,12 +71,71 @@
                     app:chipBackgroundColor="@color/white"/>
 
                 <com.google.android.material.chip.Chip
+                    android:id="@+id/chipAnimals"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Animals"
+                    app:chipBackgroundColor="@color/white"/>
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFruits"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Fruits"
+                    app:chipBackgroundColor="@color/white"/>
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipDaily"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Daily Use"
+                    app:chipBackgroundColor="@color/white"/>
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipSchool"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="School"
+                    app:chipBackgroundColor="@color/white"/>
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipNumbers"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Numbers"
+                    app:chipBackgroundColor="@color/white"/>
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipSentences"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sentences"
+                    app:chipBackgroundColor="@color/white"/>
+
+                <com.google.android.material.chip.Chip
                     android:id="@+id/chipSortAZ"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="A-Z"
                     app:chipBackgroundColor="@color/white"/>
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/btnSyncCloud"
+                    style="@style/Widget.Material3.Chip.Suggestion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sync Defaults to Cloud"
+                    app:chipIcon="@android:drawable/stat_sys_upload"
+                    app:chipBackgroundColor="@color/secondary"
+                    android:textColor="@color/white"
+                    app:chipIconTint="@color/white"/>
 
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>

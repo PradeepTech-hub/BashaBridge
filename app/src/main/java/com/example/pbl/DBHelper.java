@@ -13,7 +13,7 @@ import java.util.List;
 public class DBHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "SmartPronunciation.db";
-    private static final int DATABASE_VERSION = 4;
+    private static final int DATABASE_VERSION = 6;
 
     public static final String TABLE_PROGRESS = "progress";
     public static final String COLUMN_ID = "id";
@@ -113,23 +113,52 @@ public class DBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion < 3) {
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_PROGRESS);
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_PREFERENCES);
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_CONTENT);
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_SYNC_QUEUE);
-            onCreate(db);
-        } else if (oldVersion == 3) {
-            // Add new columns for version 4
-            db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_SPEECH_SPEED + " REAL DEFAULT 1.0");
-            db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_AUTO_PRONOUNCE + " INTEGER DEFAULT 1");
-            db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_LEARNING_LANG + " TEXT DEFAULT 'English'");
-            db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_THEME_MODE + " INTEGER DEFAULT 2");
-            db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_FONT_SIZE + " REAL DEFAULT 16.0");
-            db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_ENABLE_LEADERBOARD + " INTEGER DEFAULT 1");
-            db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_ENABLE_DAILY_GOALS + " INTEGER DEFAULT 1");
-            db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_LAST_SYNC_TIME + " INTEGER DEFAULT 0");
+        // Simple upgrade strategy: Drop and recreate
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_PROGRESS);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_PREFERENCES);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_CONTENT);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_SYNC_QUEUE);
+        onCreate(db);
+    }
+
+    @Override
+    public void onOpen(SQLiteDatabase db) {
+        super.onOpen(db);
+        migrateLegacyCategories(db);
+    }
+
+    private void migrateLegacyCategories(SQLiteDatabase db) {
+        // Migrate "School Objects" -> "School" in all tables
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_CATEGORY, "School");
+
+        db.update(TABLE_PROGRESS, values, COLUMN_CATEGORY + "=?", new String[]{"School Objects"});
+        db.update(TABLE_CONTENT, values, COLUMN_CATEGORY + "=?", new String[]{"School Objects"});
+        db.update(TABLE_SYNC_QUEUE, values, COLUMN_CATEGORY + "=?", new String[]{"School Objects"});
+        
+        // Also update favorite category if it was "School Objects"
+        Cursor cursor = db.rawQuery("SELECT " + COLUMN_FAV_CATEGORY + " FROM " + TABLE_PREFERENCES + " WHERE " + COLUMN_FAV_CATEGORY + "='School Objects'", null);
+        if (cursor.moveToFirst()) {
+            ContentValues favValues = new ContentValues();
+            favValues.put(COLUMN_FAV_CATEGORY, "School");
+            db.update(TABLE_PREFERENCES, favValues, COLUMN_FAV_CATEGORY + "=?", new String[]{"School Objects"});
+        }
+        cursor.close();
+    }
+
+    private void addColumnIfNotExists(SQLiteDatabase db, String tableName, String columnName, String columnDefinition) {
+        Cursor cursor = db.rawQuery("PRAGMA table_info(" + tableName + ")", null);
+        boolean exists = false;
+        while (cursor.moveToNext()) {
+            if (columnName.equalsIgnoreCase(cursor.getString(1))) {
+                exists = true;
+                break;
+            }
+        }
+        cursor.close();
+        if (!exists) {
+            db.execSQL("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDefinition);
         }
     }
 

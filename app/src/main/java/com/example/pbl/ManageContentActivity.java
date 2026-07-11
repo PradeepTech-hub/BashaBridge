@@ -123,6 +123,7 @@ public class ManageContentActivity extends AppCompatActivity {
 
         setupFilters();
 
+        findViewById(R.id.btnSyncCloud).setOnClickListener(v -> syncDefaultsToFirestore());
         fabAdd.setOnClickListener(v -> showEditDialog(null));
 
         loadContent();
@@ -150,11 +151,21 @@ public class ManageContentActivity extends AppCompatActivity {
             
             // 2. Add/Overwrite with Firestore data
             if (task.getResult() != null) {
+                com.google.firebase.firestore.WriteBatch migrationBatch = db.batch();
+                boolean needsMigration = false;
+
                 for (QueryDocumentSnapshot document : task.getResult()) {
                     try {
                         Word word = document.toObject(Word.class);
                         word.setId(document.getId());
                         
+                        // Legacy Migration: "School Objects" -> "School"
+                        if ("School Objects".equalsIgnoreCase(word.getCategory())) {
+                            word.setCategory("School");
+                            migrationBatch.update(db.collection(collection).document(word.getId()), "category", "School");
+                            needsMigration = true;
+                        }
+
                         Log.d("ManageContent", "Firestore Item: " + word.getEnglish() + " | URL: " + word.getImageUrl());
                         
                         String key = (word.getEnglish().trim() + "_" + word.getStandard()).toLowerCase();
@@ -162,6 +173,11 @@ public class ManageContentActivity extends AppCompatActivity {
                     } catch (Exception e) {
                         Log.e("ManageContent", "Error parsing Firestore document", e);
                     }
+                }
+
+                if (needsMigration) {
+                    migrationBatch.commit().addOnSuccessListener(aVoid -> 
+                        Log.d("ManageContent", "Legacy categories migrated successfully"));
                 }
             }
             
@@ -189,7 +205,8 @@ public class ManageContentActivity extends AppCompatActivity {
 
     private void applyFilters() {
         String query = ((EditText) findViewById(R.id.etSearch)).getText().toString().toLowerCase().trim();
-        int checkedChipId = ((com.google.android.material.chip.ChipGroup) findViewById(R.id.chipGroupFilters)).getCheckedChipId();
+        com.google.android.material.chip.ChipGroup chipGroup = findViewById(R.id.chipGroupFilters);
+        int checkedChipId = chipGroup.getCheckedChipId();
 
         filteredList.clear();
         for (Word word : contentList) {
@@ -197,11 +214,17 @@ public class ManageContentActivity extends AppCompatActivity {
                     word.getKannada().toLowerCase().contains(query) ||
                     (word.getHindi() != null && word.getHindi().toLowerCase().contains(query));
 
-            boolean matchesStd = true;
-            if (checkedChipId == R.id.chipStd1) matchesStd = (word.getStandard() == 1);
-            else if (checkedChipId == R.id.chipStd2) matchesStd = (word.getStandard() == 2);
+            boolean matchesFilter = true;
+            if (checkedChipId == R.id.chipStd1) matchesFilter = (word.getStandard() == 1);
+            else if (checkedChipId == R.id.chipStd2) matchesFilter = (word.getStandard() == 2);
+            else if (checkedChipId == R.id.chipAnimals) matchesFilter = "Animals".equalsIgnoreCase(word.getCategory());
+            else if (checkedChipId == R.id.chipFruits) matchesFilter = "Fruits".equalsIgnoreCase(word.getCategory());
+            else if (checkedChipId == R.id.chipDaily) matchesFilter = "Daily Use".equalsIgnoreCase(word.getCategory());
+            else if (checkedChipId == R.id.chipSchool) matchesFilter = "School".equalsIgnoreCase(word.getCategory());
+            else if (checkedChipId == R.id.chipNumbers) matchesFilter = "Numbers".equalsIgnoreCase(word.getCategory());
+            else if (checkedChipId == R.id.chipSentences) matchesFilter = "Sentences".equalsIgnoreCase(word.getCategory());
 
-            if (matchesSearch && matchesStd) {
+            if (matchesSearch && matchesFilter) {
                 filteredList.add(word);
             }
         }
@@ -232,7 +255,14 @@ public class ManageContentActivity extends AppCompatActivity {
 
         selectedImageUri = null;
 
-        String[] categories = {"Animals", "Fruits", "Daily Use", "School Objects", "Numbers", "Sentences"};
+        String[] categories;
+        if (contentType.equals("Sentences")) {
+            categories = new String[]{"Sentences"};
+            spinnerCategory.setText("Sentences", false);
+            spinnerCategory.setEnabled(false);
+        } else {
+            categories = new String[]{"Animals", "Fruits", "Daily Use", "School", "Numbers"};
+        }
         ArrayAdapter<String> catAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, categories);
         spinnerCategory.setAdapter(catAdapter);
 
@@ -352,6 +382,7 @@ public class ManageContentActivity extends AppCompatActivity {
     private void saveToFirestore(String english, String kannada, String hindi, List<Integer> standards, String category, String imageUrl, Word oldWord, AlertDialog dialog) {
         String collection = contentType.equals("Words") ? "words" : "sentences";
         int resId = oldWord != null ? oldWord.getImageResId() : android.R.drawable.ic_menu_gallery;
+        String uid = FirebaseAuth.getInstance().getUid();
 
         if (oldWord != null && oldWord.getId() != null) {
             // Update existing document
@@ -359,6 +390,8 @@ public class ManageContentActivity extends AppCompatActivity {
             newWord.setStandard(standards.get(0)); // Keep the first selected standard
             newWord.setCategory(category.trim());
             newWord.setImageUrl(imageUrl);
+            newWord.setCreatedBy(oldWord.getCreatedBy() != null ? oldWord.getCreatedBy() : uid);
+            newWord.setCreatedAt(oldWord.getCreatedAt() != 0 ? oldWord.getCreatedAt() : System.currentTimeMillis());
 
             db.collection(collection).document(oldWord.getId()).set(newWord)
                     .addOnSuccessListener(aVoid -> {
@@ -379,6 +412,8 @@ public class ManageContentActivity extends AppCompatActivity {
                 newWord.setStandard(std);
                 newWord.setCategory(category.trim());
                 newWord.setImageUrl(imageUrl);
+                newWord.setCreatedBy(uid);
+                newWord.setCreatedAt(System.currentTimeMillis());
 
                 boolean isLast = (i == standards.size() - 1);
                 db.collection(collection).add(newWord)
@@ -409,5 +444,43 @@ public class ManageContentActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("No", null)
                 .show();
+    }
+
+    private void syncDefaultsToFirestore() {
+        Toast.makeText(this, "Checking for missing syllabus items...", Toast.LENGTH_SHORT).show();
+        List<Word> defaults = DataManager.getAllDefaultContent(contentType);
+        String collection = contentType.equals("Words") ? "words" : "sentences";
+        
+        db.collection(collection).get().addOnSuccessListener(queryDocumentSnapshots -> {
+            java.util.Set<String> existingKeys = new java.util.HashSet<>();
+            for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                Word w = doc.toObject(Word.class);
+                String key = (w.getEnglish().trim() + "_" + w.getStandard()).toLowerCase();
+                existingKeys.add(key);
+            }
+
+            int addedCount = 0;
+            com.google.firebase.firestore.WriteBatch batch = db.batch();
+            
+            for (Word w : defaults) {
+                String key = (w.getEnglish().trim() + "_" + w.getStandard()).toLowerCase();
+                if (!existingKeys.contains(key)) {
+                    w.setCreatedBy("system");
+                    w.setCreatedAt(System.currentTimeMillis());
+                    batch.set(db.collection(collection).document(), w);
+                    addedCount++;
+                }
+            }
+
+            if (addedCount > 0) {
+                int finalAddedCount = addedCount;
+                batch.commit().addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Successfully added " + finalAddedCount + " syllabus items to Cloud", Toast.LENGTH_LONG).show();
+                    loadContent();
+                }).addOnFailureListener(e -> Toast.makeText(this, "Sync failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            } else {
+                Toast.makeText(this, "All syllabus items are already in Cloud", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

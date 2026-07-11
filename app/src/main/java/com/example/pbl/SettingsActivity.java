@@ -66,7 +66,7 @@ public class SettingsActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         dbHelper = new DBHelper(this);
-        prefs = getSharedPreferences("BashaBridgePrefs", Context.MODE_PRIVATE);
+        prefs = getSharedPreferences("BhashaSetuPrefs", Context.MODE_PRIVATE);
 
         initCommonViews();
         loadUserData();

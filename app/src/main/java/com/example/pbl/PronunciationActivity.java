@@ -117,20 +117,10 @@ public class PronunciationActivity extends AppCompatActivity {
     }
 
     private void loadFirestoreData() {
-        // --- Try Offline Content First ---
-        List<Word> offlineWords = dbHelper.getOfflineContent(selectedStandard, category, "Word");
-        if (!offlineWords.isEmpty()) {
-            wordList.clear();
-            wordList.addAll(offlineWords);
-            updateUI();
-        }
+        // Initial load from local cache (merges DataManager + previously synced Firestore content)
+        mergeAndDisplay(dbHelper.getOfflineContent(selectedStandard, category, "Word"));
 
         if (!SyncManager.getInstance(this).isOnline()) {
-            if (wordList.isEmpty()) {
-                // Fallback to static data if no offline cache
-                wordList.addAll(DataManager.getWordsForCategory(selectedStandard, category));
-                updateUI();
-            }
             return;
         }
 
@@ -138,45 +128,48 @@ public class PronunciationActivity extends AppCompatActivity {
                 .whereEqualTo("standard", selectedStandard)
                 .whereEqualTo("category", category)
                 .addSnapshotListener((value, error) -> {
-                    // Use LinkedHashMap to preserve order and merge by key
-                    java.util.Map<String, Word> mergedMap = new java.util.LinkedHashMap<>();
-
-                    // 1. Add default data first
-                    List<Word> defaults = DataManager.getWordsForCategory(selectedStandard, category);
-                    for (Word w : defaults) {
-                        String key = (w.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
-                        mergedMap.put(key, w);
-                    }
-
                     if (error != null) {
                         Log.e(TAG, "Listen failed.", error);
-                        wordList.clear();
-                        wordList.addAll(mergedMap.values());
-                        updateUI();
                         return;
                     }
 
                     if (value != null) {
-                        // 2. Add/Overwrite with Firestore data
+                        List<Word> firestoreWords = new ArrayList<>();
                         for (QueryDocumentSnapshot document : value) {
                             try {
                                 Word word = document.toObject(Word.class);
                                 word.setId(document.getId());
-                                String key = (word.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
-                                mergedMap.put(key, word);
-                                
-                                // Cache for offline
+                                firestoreWords.add(word);
+                                // Update local cache
                                 dbHelper.saveContent(word, "Word");
                             } catch (Exception e) {
                                 Log.e(TAG, "Error parsing Firestore document", e);
                             }
                         }
+                        mergeAndDisplay(firestoreWords);
                     }
-
-                    wordList.clear();
-                    wordList.addAll(mergedMap.values());
-                    updateUI();
                 });
+    }
+
+    private void mergeAndDisplay(List<Word> firestoreWords) {
+        java.util.Map<String, Word> mergedMap = new java.util.LinkedHashMap<>();
+
+        // 1. Add default data first
+        List<Word> defaults = DataManager.getWordsForCategory(selectedStandard, category);
+        for (Word w : defaults) {
+            String key = (w.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
+            mergedMap.put(key, w);
+        }
+
+        // 2. Add/Overwrite with Firestore data
+        for (Word w : firestoreWords) {
+            String key = (w.getEnglish().trim() + "_" + selectedStandard).toLowerCase();
+            mergedMap.put(key, w);
+        }
+
+        wordList.clear();
+        wordList.addAll(mergedMap.values());
+        updateUI();
     }
 
     private void updateUI() {

@@ -15,7 +15,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="Basha Setu"
+            app:title="Bhasha Setu"
             app:titleCentered="true"
             app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
 
