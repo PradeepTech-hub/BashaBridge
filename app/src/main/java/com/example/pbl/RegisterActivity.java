@@ -27,7 +27,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 public class RegisterActivity extends AppCompatActivity {
 
-    private static final String TEACHER_ACCESS_CODE = "BSHSETU2026";
+    private static final String TEACHER_ACCESS_CODE = "2026";
     private EditText etName, etEmail, etPassword, etStandard, etAccessCode;
     private com.google.android.material.textfield.TextInputLayout tilStandard, tilAccessCode;
     private RadioGroup rgRole;
@@ -130,6 +130,7 @@ public class RegisterActivity extends AppCompatActivity {
                 return;
             } else {
                 tilAccessCode.setError(null);
+                Toast.makeText(this, "Teacher Access Code Verified", Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -218,6 +219,7 @@ public class RegisterActivity extends AppCompatActivity {
                 return;
             } else {
                 tilAccessCode.setError(null);
+                Toast.makeText(this, "Teacher Access Code Verified", Toast.LENGTH_SHORT).show();
             }
         }
 

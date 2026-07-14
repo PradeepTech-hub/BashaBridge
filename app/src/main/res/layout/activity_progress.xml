@@ -69,6 +69,7 @@
                                 android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                                 android:textColor="@color/onPrimaryContainer"/>
                             <TextView
+                                android:id="@+id/tvTotalWordsLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/total_words"
@@ -99,6 +100,7 @@
                                 android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                                 android:textColor="@color/onSecondaryContainer"/>
                             <TextView
+                                android:id="@+id/tvTotalSentencesLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/total_sentences"
@@ -129,6 +131,7 @@
                                 android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                                 android:textColor="@color/onTertiaryContainer"/>
                             <TextView
+                                android:id="@+id/tvAvgAccuracyLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/accuracy"
@@ -159,6 +162,7 @@
                                 android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                                 android:textColor="#2E7D32"/>
                             <TextView
+                                android:id="@+id/tvTotalXPLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/total_xp"
@@ -236,6 +240,24 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"/>
 
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilClassFilter"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:hint="Filter by Class"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/actvClassFilter"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:text="All Classes" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvProgress"
                     android:layout_width="match_parent"
@@ -245,6 +267,16 @@
                     android:paddingBottom="16dp"
                     android:visibility="gone"
                     tools:listitem="@layout/progress_item"/>
+
+                <TextView
+                    android:id="@+id/tvNoRecords"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No records found"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                    android:gravity="center"
+                    android:layout_marginTop="32dp"
+                    android:visibility="gone"/>
 
                 <TextView
                     android:id="@+id/tvWeakWords"

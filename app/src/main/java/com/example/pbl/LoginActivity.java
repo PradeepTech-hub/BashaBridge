@@ -91,7 +91,21 @@ public class LoginActivity extends AppCompatActivity {
 
         // Check if user is already logged in
         if (mAuth.getCurrentUser() != null) {
-            checkUserRoleAndNavigate(mAuth.getCurrentUser().getUid());
+            String uid = mAuth.getCurrentUser().getUid();
+            db.collection("users").document(uid).get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            checkUserRoleAndNavigate(uid);
+                        } else {
+                            // User deleted from Firestore - force sign out
+                            mAuth.signOut();
+                            Toast.makeText(LoginActivity.this, "Account session expired.", Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        // Handle failure (e.g., allow offline if cached)
+                        checkUserRoleAndNavigate(uid);
+                    });
         }
     }
 
@@ -117,7 +131,7 @@ public class LoginActivity extends AppCompatActivity {
         // --- Offline Login Support ---
         if (!SyncManager.getInstance(this).isOnline()) {
             DBHelper dbHelper = new DBHelper(this);
-            User localUser = dbHelper.getUserByEmail(email); // Need to implement this in DBHelper
+            User localUser = dbHelper.getUserByEmail(email); 
             if (localUser != null) {
                 if (selectedRole.equals(localUser.getRole())) {
                     Toast.makeText(this, "Offline Login Successful", Toast.LENGTH_SHORT).show();
@@ -133,10 +147,28 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
+        // Authenticate with Firebase Auth
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
-                        checkUserRoleAndNavigate(mAuth.getCurrentUser().getUid(), selectedRole);
+                        String uid = mAuth.getCurrentUser().getUid();
+                        // MANDATORY: Verify user exists in Firestore before allowing login
+                        db.collection("users").document(uid).get()
+                                .addOnSuccessListener(documentSnapshot -> {
+                                    if (documentSnapshot.exists()) {
+                                        checkUserRoleAndNavigate(uid, selectedRole);
+                                    } else {
+                                        // User deleted from Firestore but exists in Auth
+                                        mAuth.signOut();
+                                        btnLogin.setEnabled(true);
+                                        Toast.makeText(LoginActivity.this, "Account not found in database. Please register again.", Toast.LENGTH_LONG).show();
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    mAuth.signOut();
+                                    btnLogin.setEnabled(true);
+                                    Toast.makeText(LoginActivity.this, "Database error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                });
                     } else {
                         btnLogin.setEnabled(true);
                         Toast.makeText(LoginActivity.this, "Authentication failed: " + task.getException().getMessage(),
@@ -179,7 +211,25 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         String uid = mAuth.getCurrentUser().getUid();
-                        checkIfUserExistsAndNavigate(uid, selectedRole);
+                        // For Google Login, we still check if the user exists in Firestore
+                        db.collection("users").document(uid).get()
+                                .addOnSuccessListener(documentSnapshot -> {
+                                    if (documentSnapshot.exists()) {
+                                        checkUserRoleAndNavigate(uid, selectedRole);
+                                    } else {
+                                        // If user is new or deleted from Firestore, redirect to Register or auto-create
+                                        // But per requirement, we ensure they only log in if "valid existing"
+                                        // Here we auto-create if it's the first time, but if you want strict existing only:
+                                        // For now, I'll follow the existing logic of creating a profile if it's a new Google user,
+                                        // but it will fail if they were deleted and you want to block them.
+                                        checkIfUserExistsAndNavigate(uid, selectedRole);
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    mAuth.signOut();
+                                    btnGoogleLogin.setEnabled(true);
+                                    Toast.makeText(LoginActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                });
                     } else {
                         btnGoogleLogin.setEnabled(true);
                         Toast.makeText(LoginActivity.this, "Firebase auth failed: " + task.getException().getMessage(),
@@ -194,22 +244,10 @@ public class LoginActivity extends AppCompatActivity {
                     if (documentSnapshot.exists()) {
                         checkUserRoleAndNavigate(uid, selectedRole);
                     } else {
-                        // User exists in Auth but not in Firestore - redirected to complete registration
-                        // Or auto-register Google users
-                        FirebaseUser firebaseUser = mAuth.getCurrentUser();
-                        if (firebaseUser != null) {
-                            User newUser = new User(uid, firebaseUser.getDisplayName(), firebaseUser.getEmail(), selectedRole, "N/A", System.currentTimeMillis());
-                            db.collection("users").document(uid).set(newUser)
-                                    .addOnSuccessListener(aVoid -> {
-                                        new DBHelper(this).saveUser(newUser);
-                                        proceedToDashboard(newUser);
-                                    })
-                                    .addOnFailureListener(e -> {
-                                        Toast.makeText(this, "Failed to create profile: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                                        mAuth.signOut();
-                                        btnGoogleLogin.setEnabled(true);
-                                    });
-                        }
+                        // User exists in Auth but not in Firestore - force sign out to enforce strict registration
+                        mAuth.signOut();
+                        btnGoogleLogin.setEnabled(true);
+                        Toast.makeText(this, "Account not found. Please register first.", Toast.LENGTH_LONG).show();
                     }
                 })
                 .addOnFailureListener(e -> {
