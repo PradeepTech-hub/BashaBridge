@@ -56,9 +56,11 @@ public class SyncManager {
         for (HashMap<String, Object> item : queue) {
             Map<String, Object> progress = new HashMap<>();
             progress.put("uid", item.get("uid"));
+            progress.put("name", item.get("name"));
             progress.put("word", item.get("word"));
             progress.put("score", item.get("score"));
             progress.put("category", item.get("category"));
+            progress.put("standard", item.get("standard"));
             progress.put("timestamp", item.get("timestamp"));
 
             batch.set(db.collection("progress").document(), progress);

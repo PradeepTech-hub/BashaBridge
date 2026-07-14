@@ -148,6 +148,9 @@ public class MainActivity extends AppCompatActivity {
                     if (documentSnapshot != null && documentSnapshot.exists()) {
                         User user = documentSnapshot.toObject(User.class);
                         if (user != null) {
+                            user.setUid(uid);
+                            dbHelper.saveUser(user); // Important: Cache user info for Teacher Dashboard lookups
+
                             String standardStr = user.getStandard();
                             try {
                                 userStandard = Integer.parseInt(standardStr != null && !standardStr.trim().isEmpty() && !standardStr.equals("N/A") ? standardStr : "1");

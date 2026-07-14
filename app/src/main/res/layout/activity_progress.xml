@@ -236,16 +236,15 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"/>
 
-                <ListView
-                    android:id="@+id/lvProgress"
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvProgress"
                     android:layout_width="match_parent"
-                    android:layout_height="400dp"
-                    android:divider="@android:color/transparent"
-                    android:dividerHeight="12dp"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
                     android:clipToPadding="false"
                     android:paddingBottom="16dp"
                     android:visibility="gone"
-                    tools:listitem="@android:layout/simple_list_item_2"/>
+                    tools:listitem="@layout/progress_item"/>
 
                 <TextView
                     android:id="@+id/tvWeakWords"

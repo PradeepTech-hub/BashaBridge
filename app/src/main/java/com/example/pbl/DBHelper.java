@@ -13,7 +13,7 @@ import java.util.List;
 public class DBHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "SmartPronunciation.db";
-    private static final int DATABASE_VERSION = 6;
+    private static final int DATABASE_VERSION = 8;
 
     public static final String TABLE_PROGRESS = "progress";
     public static final String COLUMN_ID = "id";
@@ -105,6 +105,8 @@ public class DBHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE " + TABLE_SYNC_QUEUE + " (" +
                 COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 COLUMN_UID + " TEXT, " +
+                COLUMN_NAME + " TEXT, " +
+                COLUMN_STANDARD + " TEXT, " +
                 COLUMN_WORD + " TEXT, " +
                 COLUMN_SCORE + " INTEGER, " +
                 COLUMN_CATEGORY + " TEXT, " +
@@ -231,6 +233,17 @@ public class DBHelper extends SQLiteOpenHelper {
             user.setStreak(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_STREAK)));
             user.setStandard(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_STANDARD)));
             user.setLastActive(cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_LAST_ACTIVE)));
+            
+            // Settings recovery
+            user.setSpeechSpeed(cursor.getFloat(cursor.getColumnIndexOrThrow(COLUMN_SPEECH_SPEED)));
+            user.setAutoPronounce(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_AUTO_PRONOUNCE)) == 1);
+            user.setLearningLang(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_LEARNING_LANG)));
+            user.setThemeMode(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_THEME_MODE)));
+            user.setFontSize(cursor.getFloat(cursor.getColumnIndexOrThrow(COLUMN_FONT_SIZE)));
+            user.setEnableLeaderboard(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ENABLE_LEADERBOARD)) == 1);
+            user.setEnableDailyGoals(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ENABLE_DAILY_GOALS)) == 1);
+            user.setLastSyncTime(cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_LAST_SYNC_TIME)));
+
             cursor.close();
             return user;
         }
@@ -278,10 +291,12 @@ public class DBHelper extends SQLiteOpenHelper {
         return list;
     }
 
-    public void addToSyncQueue(String uid, String word, int score, String category) {
+    public void addToSyncQueue(String uid, String name, String standard, String word, int score, String category) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_UID, uid);
+        values.put(COLUMN_NAME, name);
+        values.put(COLUMN_STANDARD, standard);
         values.put(COLUMN_WORD, word);
         values.put(COLUMN_SCORE, score);
         values.put(COLUMN_CATEGORY, category);
@@ -298,6 +313,8 @@ public class DBHelper extends SQLiteOpenHelper {
                 HashMap<String, Object> map = new HashMap<>();
                 map.put("id", cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID)));
                 map.put("uid", cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_UID)));
+                map.put("name", cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NAME)));
+                map.put("standard", cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_STANDARD)));
                 map.put("word", cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_WORD)));
                 map.put("score", cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_SCORE)));
                 map.put("category", cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CATEGORY)));

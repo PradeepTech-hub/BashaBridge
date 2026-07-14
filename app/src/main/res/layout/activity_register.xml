@@ -107,6 +107,24 @@
                 android:text="Teacher"/>
         </RadioGroup>
 
+        <!-- Teacher Access Code Field (Hidden by default, shown when Teacher is selected) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilAccessCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Teacher Access Code"
+            app:helperText="Enter the authorized teacher access code."
+            app:errorEnabled="true"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etAccessCode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilStandard"
             android:layout_width="match_parent"

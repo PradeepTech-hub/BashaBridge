@@ -187,7 +187,7 @@ public class SettingsActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     // Fail silently, will sync later
-                    dbHelper.addToSyncQueue("users", mAuth.getUid(), 0, "update_settings");
+                    dbHelper.addToSyncQueue(mAuth.getUid(), currentUser.getName(), currentUser.getStandard(), "settings_update", 0, "update_settings");
                 });
     }
 

@@ -27,7 +27,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 public class RegisterActivity extends AppCompatActivity {
 
-    private EditText etName, etEmail, etPassword, etStandard;
+    private static final String TEACHER_ACCESS_CODE = "BSHSETU2026";
+    private EditText etName, etEmail, etPassword, etStandard, etAccessCode;
+    private com.google.android.material.textfield.TextInputLayout tilStandard, tilAccessCode;
     private RadioGroup rgRole;
     private Button btnRegister, btnGoogleRegister;
     private TextView tvLogin;
@@ -78,6 +80,9 @@ public class RegisterActivity extends AppCompatActivity {
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         etStandard = findViewById(R.id.etStandard);
+        etAccessCode = findViewById(R.id.etAccessCode);
+        tilStandard = findViewById(R.id.tilStandard);
+        tilAccessCode = findViewById(R.id.tilAccessCode);
         rgRole = findViewById(R.id.rgRole);
         btnRegister = findViewById(R.id.btnRegister);
         btnGoogleRegister = findViewById(R.id.btnGoogleRegister);
@@ -85,9 +90,11 @@ public class RegisterActivity extends AppCompatActivity {
 
         rgRole.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rbTeacher) {
-                findViewById(R.id.tilStandard).setVisibility(View.GONE);
+                tilStandard.setVisibility(View.GONE);
+                tilAccessCode.setVisibility(View.VISIBLE);
             } else {
-                findViewById(R.id.tilStandard).setVisibility(View.VISIBLE);
+                tilStandard.setVisibility(View.VISIBLE);
+                tilAccessCode.setVisibility(View.GONE);
             }
         });
 
@@ -101,10 +108,29 @@ public class RegisterActivity extends AppCompatActivity {
         // For registration with Google, we first validate if they selected a role/standard
         String role = rgRole.getCheckedRadioButtonId() == R.id.rbTeacher ? "teacher" : "student";
         String standard = etStandard.getText().toString().trim();
+        String accessCode = etAccessCode.getText().toString().trim();
 
+        // Standard is required for students
         if (role.equals("student") && TextUtils.isEmpty(standard)) {
             etStandard.setError("Please enter your standard before using Google Register");
             return;
+        }
+
+        // --- SECURITY CHECK: Teacher Access Code for Google Sign-in ---
+        if (role.equals("teacher")) {
+            if (TextUtils.isEmpty(accessCode)) {
+                tilAccessCode.setError("Teacher Access Code is required");
+                return;
+            } else {
+                tilAccessCode.setError(null);
+            }
+            
+            if (!accessCode.equals(TEACHER_ACCESS_CODE)) {
+                tilAccessCode.setError("Invalid Teacher Access Code");
+                return;
+            } else {
+                tilAccessCode.setError(null);
+            }
         }
 
         // Force account picker by signing out first
@@ -124,9 +150,12 @@ public class RegisterActivity extends AppCompatActivity {
                         String name = mAuth.getCurrentUser().getDisplayName();
                         String email = mAuth.getCurrentUser().getEmail();
                         String role = rgRole.getCheckedRadioButtonId() == R.id.rbTeacher ? "teacher" : "student";
-                        String standard = etStandard.getText().toString().trim();
+                        String standardInput = etStandard.getText().toString().trim();
+                        // For teachers, standard is not applicable, so we set it to empty string
+                        String finalStandard = role.equals("teacher") ? "" : standardInput;
 
-                        User user = new User(uid, name, email, role, standard, System.currentTimeMillis());
+                        User user = new User(uid, name, email, role, finalStandard, System.currentTimeMillis());
+                        new DBHelper(RegisterActivity.this).saveUser(user); // Cache for offline
                         db.collection("users").document(uid).set(user)
                                 .addOnSuccessListener(aVoid -> {
                                     Toast.makeText(RegisterActivity.this, "Registration successful", Toast.LENGTH_SHORT).show();
@@ -153,9 +182,11 @@ public class RegisterActivity extends AppCompatActivity {
         String name = etName.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
-        String standard = etStandard.getText().toString().trim();
+        String standardInput = etStandard.getText().toString().trim();
+        String accessCode = etAccessCode.getText().toString().trim();
         String role = rgRole.getCheckedRadioButtonId() == R.id.rbTeacher ? "teacher" : "student";
 
+        // Basic input validation
         if (TextUtils.isEmpty(name)) {
             etName.setError("Name is required");
             return;
@@ -168,9 +199,26 @@ public class RegisterActivity extends AppCompatActivity {
             etPassword.setError("Password is required");
             return;
         }
-        if (role.equals("student") && TextUtils.isEmpty(standard)) {
+        if (role.equals("student") && TextUtils.isEmpty(standardInput)) {
             etStandard.setError("Standard is required for students");
             return;
+        }
+
+        // --- SECURITY CHECK: Teacher registration access code verification ---
+        if (role.equals("teacher")) {
+            if (TextUtils.isEmpty(accessCode)) {
+                tilAccessCode.setError("Teacher Access Code is required");
+                return;
+            } else {
+                tilAccessCode.setError(null);
+            }
+            
+            if (!accessCode.equals(TEACHER_ACCESS_CODE)) {
+                tilAccessCode.setError("Invalid Teacher Access Code");
+                return;
+            } else {
+                tilAccessCode.setError(null);
+            }
         }
 
         btnRegister.setEnabled(false);
@@ -178,8 +226,10 @@ public class RegisterActivity extends AppCompatActivity {
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         String uid = mAuth.getCurrentUser().getUid();
-                        String finalStandard = (role.equals("teacher") || TextUtils.isEmpty(standard)) ? "1" : standard;
+                        // For teachers, standard is empty as per requirements
+                        String finalStandard = role.equals("teacher") ? "" : standardInput;
                         User user = new User(uid, name, email, role, finalStandard, System.currentTimeMillis());
+                        new DBHelper(RegisterActivity.this).saveUser(user); // Cache for offline
                         
                         db.collection("users").document(uid).set(user)
                                 .addOnSuccessListener(aVoid -> {

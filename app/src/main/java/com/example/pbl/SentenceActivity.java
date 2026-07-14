@@ -267,8 +267,10 @@ public class SentenceActivity extends AppCompatActivity {
                 updateUserXP(xp);
             }
         } else if (uid != null) {
-            dbHelper.addToSyncQueue(uid, target, score, "Sentences");
             User localUser = dbHelper.getUser(uid);
+            String userName = (localUser != null && localUser.getName() != null) ? localUser.getName() : "Student";
+            String standard = (localUser != null && localUser.getStandard() != null) ? localUser.getStandard() : String.valueOf(selectedStandard);
+            dbHelper.addToSyncQueue(uid, userName, standard, target, score, "Sentences");
             if (localUser != null && score >= 60) {
                 int xp = score / 5;
                 totalXP += xp;
@@ -342,8 +344,14 @@ public class SentenceActivity extends AppCompatActivity {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return;
 
+        User currentUser = dbHelper.getUser(uid);
+        String userName = (currentUser != null && currentUser.getName() != null) ? currentUser.getName() : "Student";
+        String standard = (currentUser != null && currentUser.getStandard() != null) ? currentUser.getStandard() : String.valueOf(selectedStandard);
+
         Map<String, Object> progress = new HashMap<>();
         progress.put("uid", uid);
+        progress.put("name", userName);
+        progress.put("standard", standard);
         progress.put("word", text);
         progress.put("score", score);
         progress.put("category", "Sentences");

@@ -7,7 +7,10 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.SimpleAdapter;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,7 +33,7 @@ import java.util.Locale;
 public class ProgressActivity extends AppCompatActivity {
 
     private static final String TAG = "ProgressActivity";
-    private ListView lvProgress;
+    private RecyclerView rvProgress;
     private LinearLayout llHistoryContainer;
     private TextView tvFavCategory, tvWeakWords, tvWeakestCategory, tvBestScore, tvLastPractice;
     private TextView tvTotalWords, tvTotalSentences, tvAvgAccuracy, tvTotalXP;
@@ -40,7 +43,7 @@ public class ProgressActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
     private ArrayList<HashMap<String, String>> displayData;
-    private SimpleAdapter adapter;
+    private ProgressAdapter adapter;
     private final HashMap<String, String> userCache = new HashMap<>();
 
     private boolean isTeacherView = false;
@@ -111,7 +114,7 @@ public class ProgressActivity extends AppCompatActivity {
         
         swipeRefresh = findViewById(R.id.swipeRefresh);
         llHistoryContainer = findViewById(R.id.llHistoryContainer);
-        lvProgress = findViewById(R.id.lvProgress);
+        rvProgress = findViewById(R.id.rvProgress);
         tvWeakWords = findViewById(R.id.tvWeakWords);
         Button btnClearProgress = findViewById(R.id.btnClearProgress);
         
@@ -120,22 +123,12 @@ public class ProgressActivity extends AppCompatActivity {
             findViewById(R.id.cardInsights).setVisibility(View.GONE);
             tvWeakWords.setVisibility(View.GONE);
             btnClearProgress.setVisibility(View.GONE);
-            lvProgress.setVisibility(View.VISIBLE);
+            rvProgress.setVisibility(View.VISIBLE);
             
             displayData = new ArrayList<>();
-            String[] from = {"word", "score", "category", "student"};
-            int[] to = {R.id.tvProgressWord, R.id.tvProgressScore, R.id.tvProgressCategory, R.id.tvStudentName};
-            
-            adapter = new SimpleAdapter(this, displayData, R.layout.progress_item, from, to);
-            adapter.setViewBinder((view, data, textRepresentation) -> {
-                if (view.getId() == R.id.tvStudentName) {
-                    view.setVisibility(View.VISIBLE);
-                    ((TextView) view).setText(textRepresentation);
-                    return true;
-                }
-                return false;
-            });
-            lvProgress.setAdapter(adapter);
+            rvProgress.setLayoutManager(new LinearLayoutManager(this));
+            adapter = new ProgressAdapter(displayData);
+            rvProgress.setAdapter(adapter);
             
             loadAllStudentsProgress();
         } else {
@@ -192,14 +185,23 @@ public class ProgressActivity extends AppCompatActivity {
                     displayData.clear();
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                         String uid = doc.getString("uid");
+                        String name = doc.getString("name");
+                        String standard = doc.getString("standard");
+                        
                         HashMap<String, String> map = new HashMap<>();
                         map.put("word", doc.getString("word"));
                         map.put("score", "Score: " + doc.get("score"));
                         map.put("category", "Category: " + doc.getString("category"));
                         
-                        map.put("student", "Student: " + uid);
+                        if (name != null) {
+                            String studentInfo = "Student: " + name + (standard != null ? " (" + standard + ")" : "");
+                            map.put("student", studentInfo);
+                            if (uid != null) userCache.put(uid, studentInfo);
+                        } else {
+                            map.put("student", "Student: Loading...");
+                            resolveStudentInfo(uid, map);
+                        }
                         displayData.add(map);
-                        resolveStudentInfo(uid, map);
                     }
                     adapter.notifyDataSetChanged();
                     swipeRefresh.setRefreshing(false);
@@ -218,7 +220,17 @@ public class ProgressActivity extends AppCompatActivity {
 
         if (userCache.containsKey(uid)) {
             map.put("student", userCache.get(uid));
-            adapter.notifyDataSetChanged();
+            runOnUiThread(() -> adapter.notifyDataSetChanged());
+            return;
+        }
+
+        // Try local cache first
+        User cachedUser = dbHelper.getUser(uid);
+        if (cachedUser != null && cachedUser.getName() != null) {
+            String info = "Student: " + cachedUser.getName() + (cachedUser.getStandard() != null ? " (" + cachedUser.getStandard() + ")" : "");
+            userCache.put(uid, info);
+            map.put("student", info);
+            runOnUiThread(() -> adapter.notifyDataSetChanged());
             return;
         }
 
@@ -226,13 +238,37 @@ public class ProgressActivity extends AppCompatActivity {
             if (documentSnapshot.exists()) {
                 String name = documentSnapshot.getString("name");
                 String standard = documentSnapshot.getString("standard");
-                String info = "Student: " + (name != null ? name : "Unknown") + " | Class: " + (standard != null ? standard : "N/A");
+                String info = "Student: " + (name != null ? name : "Unknown") + (standard != null ? " (" + standard + ")" : "");
                 userCache.put(uid, info);
                 map.put("student", info);
+                
+                // Save to local cache for next time
+                try {
+                    User newUser = documentSnapshot.toObject(User.class);
+                    if (newUser != null) {
+                        newUser.setUid(uid);
+                        dbHelper.saveUser(newUser);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error mapping user document for " + uid, e);
+                    // Fallback: manually create user object if toObject fails
+                    User newUser = new User();
+                    newUser.setUid(uid);
+                    newUser.setName(name);
+                    newUser.setStandard(standard);
+                    newUser.setRole("student");
+                    dbHelper.saveUser(newUser);
+                }
             } else {
-                map.put("student", "ID: " + uid);
+                map.put("student", "Student: User Not Found");
             }
-            adapter.notifyDataSetChanged();
+            runOnUiThread(() -> adapter.notifyDataSetChanged());
+        }).addOnFailureListener(e -> {
+            // If it's a permission error, we still can't get it from Firestore
+            // But if we already tried local and it wasn't there, we show the error or UID
+            map.put("student", "Student: " + uid); // Fallback to UID if name fetch fails
+            runOnUiThread(() -> adapter.notifyDataSetChanged());
+            Log.e(TAG, "Failed to resolve student info for " + uid, e);
         });
     }
 
@@ -334,5 +370,53 @@ public class ProgressActivity extends AppCompatActivity {
         tvCat.setText("Category: " + category);
         
         llHistoryContainer.addView(view);
+    }
+
+    private class ProgressAdapter extends RecyclerView.Adapter<ProgressAdapter.ViewHolder> {
+        private final ArrayList<HashMap<String, String>> data;
+
+        public ProgressAdapter(ArrayList<HashMap<String, String>> data) {
+            this.data = data;
+        }
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.progress_item, parent, false);
+            return new ViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            HashMap<String, String> item = data.get(position);
+            holder.tvWord.setText(item.get("word"));
+            holder.tvScore.setText(item.get("score"));
+            holder.tvCategory.setText(item.get("category"));
+            
+            String student = item.get("student");
+            if (student != null) {
+                holder.tvStudent.setVisibility(View.VISIBLE);
+                holder.tvStudent.setText(student);
+            } else {
+                holder.tvStudent.setVisibility(View.GONE);
+            }
+        }
+
+        @Override
+        public int getItemCount() {
+            return data.size();
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            TextView tvWord, tvScore, tvCategory, tvStudent;
+
+            public ViewHolder(@NonNull View itemView) {
+                super(itemView);
+                tvWord = itemView.findViewById(R.id.tvProgressWord);
+                tvScore = itemView.findViewById(R.id.tvProgressScore);
+                tvCategory = itemView.findViewById(R.id.tvProgressCategory);
+                tvStudent = itemView.findViewById(R.id.tvStudentName);
+            }
+        }
     }
 }
